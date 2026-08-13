@@ -11,4 +11,5 @@ export * from './item';
 export * from './modelSelection';
 export * from './pluginConfig';
 export * from './runtimeAdditionalContext';
+export * from './share';
 export * from './tts';

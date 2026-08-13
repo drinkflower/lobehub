@@ -14,6 +14,10 @@ class AgentShareService {
     return lambdaClient.agentShare.getShareStatus.query({ agentId });
   }
 
+  async getSharedAgent(shareId: string) {
+    return lambdaClient.share.getSharedAgent.query({ shareId });
+  }
+
   async updateShareConfig(agentId: string, config: AgentShareConfigInput) {
     return lambdaClient.agentShare.updateShareConfig.mutate({ agentId, config });
   }
