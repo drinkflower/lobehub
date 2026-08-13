@@ -6,6 +6,7 @@ import type { AgentShareConfig } from '../schemas';
 import { agents, agentShares } from '../schemas';
 import type { LobeChatDatabase } from '../type';
 import { normalizeInboxAgentAvatar, normalizeInboxAgentTitle } from '../utils/inboxAgent';
+import { isUuid } from '../utils/uuid';
 
 const DEFAULT_AGENT_SHARE_CONFIG = {
   allowReadMemory: false,
@@ -15,9 +16,29 @@ const DEFAULT_AGENT_SHARE_CONFIG = {
     knowledgeBase: 'none',
     uploadAllowed: false,
   },
-  guestEnabled: false,
-  maxAmountPerVisitor: 0.1,
+  maxTopicsPerVisitor: 5,
+  maxTurnsPerTopic: 20,
 } satisfies AgentShareConfig;
+
+/** Fill fields missing from rows created before the required v1 limits were introduced. */
+const normalizeAgentShareConfig = (config: AgentShareConfig | null): AgentShareConfig => ({
+  allowReadMemory: config?.allowReadMemory ?? DEFAULT_AGENT_SHARE_CONFIG.allowReadMemory,
+  enabledToolIds: config?.enabledToolIds ?? DEFAULT_AGENT_SHARE_CONFIG.enabledToolIds,
+  filePermissionConfig: {
+    agentFiles:
+      config?.filePermissionConfig?.agentFiles ??
+      DEFAULT_AGENT_SHARE_CONFIG.filePermissionConfig.agentFiles,
+    knowledgeBase:
+      config?.filePermissionConfig?.knowledgeBase ??
+      DEFAULT_AGENT_SHARE_CONFIG.filePermissionConfig.knowledgeBase,
+    uploadAllowed:
+      config?.filePermissionConfig?.uploadAllowed ??
+      DEFAULT_AGENT_SHARE_CONFIG.filePermissionConfig.uploadAllowed,
+  },
+  maxTopicsPerVisitor:
+    config?.maxTopicsPerVisitor ?? DEFAULT_AGENT_SHARE_CONFIG.maxTopicsPerVisitor,
+  maxTurnsPerTopic: config?.maxTurnsPerTopic ?? DEFAULT_AGENT_SHARE_CONFIG.maxTurnsPerTopic,
+});
 
 export type AgentShareData = NonNullable<
   Awaited<ReturnType<(typeof AgentShareModel)['findByShareId']>>
@@ -63,7 +84,12 @@ export class AgentShareModel {
   create = async (agentId: string, visibility: ShareVisibility = 'private') => {
     const agent = await this.findOwnedAgent(agentId);
 
-    if (!agent) throw new Error('Personal agent not found or not owned by user');
+    if (!agent) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Agent sharing is only available to personal agent owners',
+      });
+    }
 
     const [created] = await this.db
       .insert(agentShares)
@@ -82,7 +108,9 @@ export class AgentShareModel {
       .where(and(eq(agentShares.agentId, agentId), this.ownership()))
       .limit(1);
 
-    return share ?? null;
+    if (!share) return null;
+
+    return { ...share, shareConfig: normalizeAgentShareConfig(share.shareConfig) };
   };
 
   /** Replace the complete share configuration. */
@@ -119,6 +147,8 @@ export class AgentShareModel {
 
   /** Resolve the public metadata required by an agent share page. */
   static findByShareId = async (db: LobeChatDatabase, shareId: string) => {
+    if (!isUuid(shareId)) return null;
+
     const [share] = await db
       .select({
         agentAvatar: agents.avatar,
@@ -146,6 +176,7 @@ export class AgentShareModel {
       ...share,
       agentAvatar: normalizeInboxAgentAvatar(share.agentAvatar, { slug: share.agentSlug }),
       agentTitle: normalizeInboxAgentTitle(share.agentTitle, { slug: share.agentSlug }),
+      shareConfig: normalizeAgentShareConfig(share.shareConfig),
     };
   };
 
@@ -161,7 +192,7 @@ export class AgentShareModel {
   static findByShareIdWithAccessCheck = async (
     db: LobeChatDatabase,
     shareId: string,
-    accessUserId?: string,
+    accessUserId: string,
   ): Promise<AgentShareData> => {
     const share = await AgentShareModel.findByShareId(db, shareId);
 

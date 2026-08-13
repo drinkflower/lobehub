@@ -66,8 +66,8 @@ describe('AgentShareModel', () => {
             knowledgeBase: 'none',
             uploadAllowed: false,
           },
-          guestEnabled: false,
-          maxAmountPerVisitor: 0.1,
+          maxTopicsPerVisitor: 5,
+          maxTurnsPerTopic: 20,
         },
         userViewCount: 0,
         visibility: 'private',
@@ -75,6 +75,7 @@ describe('AgentShareModel', () => {
       expect(share!.id).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
       );
+      expect(share!.shareConfig).not.toHaveProperty('guestEnabled');
     });
 
     it('preserves the first share when creation conflicts', async () => {
@@ -91,19 +92,39 @@ describe('AgentShareModel', () => {
     });
 
     it('rejects missing, foreign, and workspace agents', async () => {
-      await expect(agentShareModel.create('missing-agent')).rejects.toThrow(
-        'Personal agent not found or not owned by user',
-      );
-      await expect(agentShareModel.create(otherAgentId)).rejects.toThrow(
-        'Personal agent not found or not owned by user',
-      );
-      await expect(agentShareModel.create(workspaceAgentId)).rejects.toThrow(
-        'Personal agent not found or not owned by user',
-      );
+      await expect(agentShareModel.create('missing-agent')).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      await expect(agentShareModel.create(otherAgentId)).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      await expect(agentShareModel.create(workspaceAgentId)).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
     });
   });
 
   describe('owner operations', () => {
+    it('normalizes a legacy null config to conservative defaults', async () => {
+      const [legacyShare] = await serverDB.insert(agentShares).values({ agentId }).returning();
+
+      const ownerShare = await agentShareModel.getByAgentId(agentId);
+      const resolvedShare = await AgentShareModel.findByShareId(serverDB, legacyShare.id);
+
+      expect(ownerShare?.shareConfig).toEqual({
+        allowReadMemory: false,
+        enabledToolIds: [],
+        filePermissionConfig: {
+          agentFiles: 'none',
+          knowledgeBase: 'none',
+          uploadAllowed: false,
+        },
+        maxTopicsPerVisitor: 5,
+        maxTurnsPerTopic: 20,
+      });
+      expect(resolvedShare?.shareConfig).toEqual(ownerShare?.shareConfig);
+    });
+
     it('reads and updates the complete config', async () => {
       await agentShareModel.create(agentId);
       const config: AgentShareConfig = {
@@ -114,9 +135,8 @@ describe('AgentShareModel', () => {
           knowledgeBase: 'read',
           uploadAllowed: true,
         },
-        guestEnabled: true,
-        maxAmountPerVisitor: 0.25,
-        maxGuestTopics: 20,
+        maxTopicsPerVisitor: 10,
+        maxTurnsPerTopic: 40,
       };
 
       const updated = await agentShareModel.updateConfig(agentId, config);
@@ -139,7 +159,12 @@ describe('AgentShareModel', () => {
 
     it('returns null for missing shares', async () => {
       expect(await agentShareModel.getByAgentId(agentId)).toBeNull();
-      expect(await agentShareModel.updateConfig(agentId, { maxAmountPerVisitor: 0.1 })).toBeNull();
+      expect(
+        await agentShareModel.updateConfig(agentId, {
+          maxTopicsPerVisitor: 5,
+          maxTurnsPerTopic: 20,
+        }),
+      ).toBeNull();
       expect(await agentShareModel.updateVisibility(agentId, 'link')).toBeNull();
       expect(await agentShareModel.deleteByAgentId(agentId)).toBeNull();
     });
@@ -149,7 +174,10 @@ describe('AgentShareModel', () => {
 
       expect(await agentShareModel.getByAgentId(otherAgentId)).toBeNull();
       expect(
-        await agentShareModel.updateConfig(otherAgentId, { maxAmountPerVisitor: 0.5 }),
+        await agentShareModel.updateConfig(otherAgentId, {
+          maxTopicsPerVisitor: 5,
+          maxTurnsPerTopic: 20,
+        }),
       ).toBeNull();
       expect(await agentShareModel.updateVisibility(otherAgentId, 'link')).toBeNull();
       expect(await agentShareModel.deleteByAgentId(otherAgentId)).toBeNull();
@@ -179,7 +207,10 @@ describe('AgentShareModel', () => {
         agentName: 'Shareable Agent',
         agentTitle: 'Shareable Agent Title',
         ownerId: userId,
-        shareConfig: expect.objectContaining({ maxAmountPerVisitor: 0.1 }),
+        shareConfig: expect.objectContaining({
+          maxTopicsPerVisitor: 5,
+          maxTurnsPerTopic: 20,
+        }),
         shareId: created!.id,
         visibility: 'link',
       });
@@ -190,7 +221,7 @@ describe('AgentShareModel', () => {
         .insert(agentShares)
         .values({
           agentId: workspaceAgentId,
-          shareConfig: { maxAmountPerVisitor: 0.1 },
+          shareConfig: { maxTopicsPerVisitor: 5, maxTurnsPerTopic: 20 },
           visibility: 'link',
         })
         .returning();
@@ -202,6 +233,13 @@ describe('AgentShareModel', () => {
       expect(
         await AgentShareModel.findByShareId(serverDB, '00000000-0000-0000-0000-000000000000'),
       ).toBeNull();
+    });
+
+    it('treats a malformed UUID as not found', async () => {
+      expect(await AgentShareModel.findByShareId(serverDB, 'not-a-uuid')).toBeNull();
+      await expect(
+        AgentShareModel.findByShareIdWithAccessCheck(serverDB, 'not-a-uuid', userId),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
   });
 
@@ -218,21 +256,22 @@ describe('AgentShareModel', () => {
       expect(share.shareId).toBe(created!.id);
     });
 
-    it('rejects anonymous and non-owner access to a private share', async () => {
+    it('rejects non-owner access to a private share', async () => {
       const created = await agentShareModel.create(agentId);
 
-      await expect(
-        AgentShareModel.findByShareIdWithAccessCheck(serverDB, created!.id),
-      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
       await expect(
         AgentShareModel.findByShareIdWithAccessCheck(serverDB, created!.id, otherUserId),
       ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     });
 
-    it('allows anonymous access to a link share', async () => {
+    it('allows authenticated access to a link share', async () => {
       const created = await agentShareModel.create(agentId, 'link');
 
-      const share = await AgentShareModel.findByShareIdWithAccessCheck(serverDB, created!.id);
+      const share = await AgentShareModel.findByShareIdWithAccessCheck(
+        serverDB,
+        created!.id,
+        otherUserId,
+      );
 
       expect(share.shareId).toBe(created!.id);
     });

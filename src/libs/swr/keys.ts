@@ -1006,6 +1006,7 @@ export const inboxKeys = {
 
 // ---- share (shared topic / page) ----------------------------------------
 export const shareKeys = {
+  agentInfo: def('share:agentInfo', (agentId: string) => ['share:agentInfo', agentId]),
   pageDocument: def('share:pageDocument', (documentId: string) => [
     'share:pageDocument',
     documentId,

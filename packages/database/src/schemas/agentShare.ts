@@ -11,10 +11,10 @@ export interface AgentShareConfig {
     knowledgeBase?: 'none' | 'read';
     uploadAllowed?: boolean;
   };
-  guestEnabled?: boolean;
-  /** Required lifetime usage allowance for each visitor. */
-  maxAmountPerVisitor: number;
-  maxGuestTopics?: number;
+  /** Maximum number of topics each signed-in visitor can create for this share. */
+  maxTopicsPerVisitor: number;
+  /** Maximum number of message turns allowed in each shared topic. */
+  maxTurnsPerTopic: number;
   // tipSplitRatio is platform-controlled, not configurable by the creator
 }
 
