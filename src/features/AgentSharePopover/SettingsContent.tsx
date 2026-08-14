@@ -13,43 +13,13 @@ import type { AgentShareConfigInput } from '@/server/routers/lambda/agentShare';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 
+import BudgetSection from './BudgetSection';
+import { Section, SettingRow } from './SectionLayout';
 import { useAgentShare } from './useAgentShare';
 
 type FileAccess = 'none' | 'read';
 
 const LIMIT_COMMIT_DELAY = 500;
-
-interface SettingRowProps {
-  children: React.ReactNode;
-  label: string;
-}
-
-const SettingRow = ({ children, label }: SettingRowProps) => (
-  <Flexbox horizontal align="center" gap={16} justify="space-between">
-    <Text>{label}</Text>
-    {children}
-  </Flexbox>
-);
-
-interface SectionProps {
-  children: React.ReactNode;
-  desc?: string;
-  title: string;
-}
-
-const Section = ({ children, desc, title }: SectionProps) => (
-  <Flexbox gap={12}>
-    <Flexbox gap={2}>
-      <Text strong>{title}</Text>
-      {desc && (
-        <Text fontSize={12} type="secondary">
-          {desc}
-        </Text>
-      )}
-    </Flexbox>
-    {children}
-  </Flexbox>
-);
 
 interface SettingsContentProps {
   agentId: string;
@@ -136,6 +106,8 @@ const SettingsContent = memo<SettingsContentProps>(({ agentId }) => {
 
   return (
     <Flexbox gap={24} padding={16} style={{ maxHeight: '65vh', overflowY: 'auto' }}>
+      {/* Budget leads: without a funded share budget the link is unusable. */}
+      <BudgetSection agentId={agentId} />
       <Section
         desc={t('share.settings.permissions.desc')}
         title={t('share.settings.permissions.title')}
