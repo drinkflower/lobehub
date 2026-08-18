@@ -661,6 +661,25 @@ containment. Prove a publish by fetching the public HTML (data URIs or 200
 sidecars) and opening the live page — in-app preview of the local file does not
 prove the hosted assets.
 
+### L-S14 — Claiming an image property from the prompt that asked for it
+
+**Wrong approach:** satisfy a requirement about a generated image (transparent
+background, exact aspect ratio, no text) by adding that wording to the prompt, then
+publish the prompt diff, a unit test asserting the wording, and a screenshot of the
+result as proof.
+
+**Why it fails:** the property lives in the returned bytes, not in the request. LobeHub's
+preferred artwork model returns JPEG, so an alpha channel is impossible regardless of
+wording — and asked for "a transparent background" the model _paints_ the grey-white
+checkerboard that UIs use to depict transparency. Both failures look correct in a
+screenshot and pass any prompt-level assertion.
+
+**Correct approach:** verify the produced artifact — decode it and assert the property
+numerically (alpha at the corners vs the subject, encoded format signature, dimensions),
+and where the property is compositional, show the artifact over a contrasting surface.
+When the model cannot deliver the property, produce it in code after generation rather
+than re-wording the prompt.
+
 ## Historical source
 
 Detailed incident narratives and retired pixel- or component-specific directions

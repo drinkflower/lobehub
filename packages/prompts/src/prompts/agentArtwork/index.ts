@@ -29,6 +29,27 @@ const STYLE_DIRECTIONS: Record<AgentArtworkStyle, string> = {
 };
 
 /**
+ * Every style direction above signs off with its own background clause — a
+ * matching color, or pure white. Both fight the cut-out: a matching color is by
+ * definition close to the character's palette, and white collides with the
+ * white that anime and line-art styles put on the character. These variants
+ * drop that clause so the contrast requirement above is the only backdrop rule.
+ */
+const FULL_BODY_STYLE_OVERRIDES: Record<AgentArtworkStyle, string> = {
+  anime: STYLE_DIRECTIONS.anime.replace(
+    ' Use a matching solid-color background with no decorations.',
+    '',
+  ),
+  lineArt: STYLE_DIRECTIONS.lineArt.replace(' Use a pure white background.', ''),
+  lobe: STYLE_DIRECTIONS.lobe.replace(', and one vivid contrasting solid background color', ''),
+  painterly: STYLE_DIRECTIONS.painterly.replace(', against a matching solid-color background', ''),
+  pixel: STYLE_DIRECTIONS.pixel.replace(
+    ', against a matching solid-color background with no decorations',
+    '',
+  ),
+};
+
+/**
  * The avatar directions above are subject-shaped (the lobe one literally asks
  * for a character), which contradicts the cover prompt's "abstract environment,
  * no person portrait" frame. Cover generation swaps in these style-only
@@ -47,7 +68,15 @@ const BACKGROUND_STYLE_OVERRIDES: Partial<Record<AgentArtworkStyle, string>> = {
 const MOTIF_DIRECTION = `Ground the imagery in the agent's specific domain and personality. Avoid generic AI and technology clichés — starry space scenes, glowing particles, circuit boards, neural-network lines, holographic grids — unless the agent's subject matter is explicitly about them.`;
 
 const AVATAR_CANVAS_DIRECTION = `Fill the entire square canvas edge to edge with the artwork: use a full-bleed composition with no white background, no white matte, no empty margin, no padding, no frame, and no border. No words, no letters, and no logo. The result must remain clear as a small app avatar.`;
-const FULL_BODY_CANVAS_DIRECTION = `Use the entire portrait canvas for a clean character presentation with a simple background, no frame, no border, no words, no letters, and no logo.`;
+/**
+ * The full-body artwork is composited onto product surfaces, so its backdrop has
+ * to come off afterwards. Asking the model for "a transparent background" does
+ * NOT work — the returned image has no alpha channel and the model paints a
+ * checkerboard *depicting* transparency instead. So we ask for the one thing it
+ * can actually deliver: a single flat keyable color, which the client then cuts
+ * out (see `cutOutFlatBackground`).
+ */
+const FULL_BODY_CANVAS_DIRECTION = `Use the entire portrait canvas for a clean character presentation. Place the character against one completely flat, uniform background color that contrasts clearly with the character and appears nowhere on the character itself: exactly one solid color across the whole canvas, with no gradient, no shading, no texture, no scenery, no ground plane, and no cast or drop shadow, so the background can be keyed out cleanly. Never draw a checkerboard, grid, or any other pattern that depicts transparency. No frame, no border, no words, no letters, and no logo.`;
 
 const AVATAR_COMPOSITION_DIRECTION = `Compose a close-up avatar: the head fills most of the frame, with at most a little of the upper body visible.`;
 const FULL_BODY_COMPOSITION_DIRECTION = `Compose a complete head-to-toe character image: show the entire body clearly, centered in a natural standing or action pose, with comfortable breathing room around the silhouette. Keep the face expressive and readable.`;
@@ -135,7 +164,9 @@ export const buildAgentArtworkPrompt = (input: AgentArtworkPromptInput): string 
   const styleDirection =
     input.kind === 'background'
       ? (BACKGROUND_STYLE_OVERRIDES[style] ?? STYLE_DIRECTIONS[style])
-      : STYLE_DIRECTIONS[style];
+      : composition === 'fullBody'
+        ? FULL_BODY_STYLE_OVERRIDES[style]
+        : STYLE_DIRECTIONS[style];
 
   const styleReferenceCount = countStyleReferences(input.styleReferenceImageUrls);
   const styleReferenceDirection = buildStyleReferenceDirection(
@@ -155,7 +186,7 @@ export const buildAgentArtworkPrompt = (input: AgentArtworkPromptInput): string 
     // and the style direction above must stay authoritative.
     const referenceDirection = counterpartReferenceUrl?.trim()
       ? composition === 'fullBody'
-        ? `\n\nUse the attached existing avatar as the exact character source of truth. Preserve the same identity, face, hair, outfit, accessories, color palette, materials, and rendering style while extending that character into a complete head-to-toe pose. Do not redesign or reinterpret the character.`
+        ? `\n\nUse the attached existing avatar as the exact character source of truth. Preserve the same identity, face, hair, outfit, accessories, color palette, materials, and rendering style while extending that character into a complete head-to-toe pose. Do not redesign or reinterpret the character. Take nothing but the character from it — ignore the avatar's background entirely and use the flat keyable backdrop described above instead.`
         : `\n\nUse the attached existing profile background as the visual source of truth. Preserve its dominant color palette, materials, lighting, atmosphere, and recurring motifs while distilling them into a single avatar subject. The avatar must feel designed as part of the same identity system, not merely depict a related topic.`
       : '';
 

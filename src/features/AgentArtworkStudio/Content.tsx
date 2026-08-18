@@ -9,6 +9,7 @@ import { resolveAgentBackground } from '@/features/AgentProfileArtwork/utils';
 import { ArtworkStudioContent, styleReferencesForArtworkStyle } from '@/features/ArtworkStudio';
 import { DEFAULT_CHIEF_AGENT_ARTWORK } from '@/features/ChiefAgent/artwork';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
+import { cutOutFullBodyArtwork } from '@/services/artworkGeneration';
 import { useAgentStore } from '@/store/agent';
 import { agentArtworkSelectors, agentSelectors } from '@/store/agent/selectors';
 import { useFileStore } from '@/store/file';
@@ -20,6 +21,34 @@ const MAX_AVATAR_SIZE = 1024 * 1024;
 interface AgentArtworkStudioContentProps {
   agentId: string;
 }
+
+/**
+ * Image models return an opaque JPEG, so the generated full-body artwork is cut
+ * out and re-uploaded as a transparent PNG before it is shown — the home
+ * surface composites it over its own background. A failed cut-out keeps the
+ * original artwork rather than blocking the result.
+ */
+const useTransparentFullBody = () => {
+  const uploadWithProgress = useFileStore((s) => s.uploadWithProgress);
+
+  return useCallback(
+    async (url: string) => {
+      const file = await cutOutFullBodyArtwork(url);
+      if (!file) return url;
+
+      try {
+        const result = await uploadWithProgress({ file });
+
+        return result?.url || url;
+      } catch (error) {
+        console.error('Failed to upload the transparent full-body artwork:', error);
+
+        return url;
+      }
+    },
+    [uploadWithProgress],
+  );
+};
 
 const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentId }) => {
   const { t } = useTranslation('setting');
@@ -33,6 +62,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
   const cancelAgentArtworkGeneration = useAgentStore((s) => s.cancelAgentArtworkGeneration);
   const updateAgentMetaById = useAgentStore((s) => s.updateAgentMetaById);
   const uploadWithProgress = useFileStore((s) => s.uploadWithProgress);
+  const toTransparentFullBody = useTransparentFullBody();
 
   const [uploading, setUploading] = useState(false);
   const [fullBody, setFullBody] = useState<string>();
@@ -63,7 +93,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
           generate: generateAgentArtwork,
           input: commonInput,
         });
-        if (result.fullBodyUrl) setFullBody(result.fullBodyUrl);
+        if (result.fullBodyUrl) setFullBody(await toTransparentFullBody(result.fullBodyUrl));
       } catch {
         // The Agent store owns the persistent error state rendered below.
       } finally {
@@ -80,6 +110,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
       meta.name,
       meta.title,
       systemRole,
+      toTransparentFullBody,
     ],
   );
 

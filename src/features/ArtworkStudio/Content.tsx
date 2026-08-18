@@ -248,107 +248,99 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
 
     return (
       <Flexbox gap={20} padding={24}>
-        <Flexbox gap={8}>
-          <Flexbox gap={2}>
-            <Text className={styles.sectionTitle}>{t('artworkStudio.composition.title')}</Text>
-            <Text className={styles.hint}>{t('artworkStudio.composition.hint')}</Text>
+        <div className={styles.outputGrid}>
+          <Flexbox
+            align={'center'}
+            className={styles.outputCard}
+            gap={10}
+            role={'button'}
+            tabIndex={0}
+            onClick={() => avatarInputRef.current && openFilePicker(avatarInputRef.current)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                if (avatarInputRef.current) openFilePicker(avatarInputRef.current);
+              }
+            }}
+          >
+            <Flexbox horizontal align={'center'} gap={6}>
+              <Icon icon={CircleUserRound} size={16} />
+              <Text className={styles.sectionTitle}>{t('artworkStudio.composition.avatar')}</Text>
+            </Flexbox>
+            <Center className={`${styles.outputPreview} ${styles.outputPreviewAvatar}`}>
+              <Avatar
+                avatar={avatar || undefined}
+                key={avatarRemountKey(avatar)}
+                shape={'square'}
+                size={148}
+              />
+              {renderGenerationOverlay('avatar')}
+            </Center>
+            <Flexbox horizontal className={styles.outputActions} gap={8}>
+              <Button icon={UploadIcon} loading={uploading} size={'small'} style={{ flex: 1 }}>
+                {t('artworkStudio.upload')}
+              </Button>
+              <Button
+                icon={WandSparkles}
+                size={'small'}
+                style={{ flex: 1 }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onGenerate(style, 'avatar');
+                }}
+              >
+                {t('artworkStudio.generate.avatar')}
+              </Button>
+            </Flexbox>
           </Flexbox>
-          <div className={styles.outputGrid}>
-            <Flexbox
-              align={'center'}
-              className={styles.outputCard}
-              gap={10}
-              role={'button'}
-              tabIndex={0}
-              onClick={() => avatarInputRef.current && openFilePicker(avatarInputRef.current)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  if (avatarInputRef.current) openFilePicker(avatarInputRef.current);
-                }
-              }}
-            >
-              <Flexbox horizontal align={'center'} gap={6}>
-                <Icon icon={CircleUserRound} size={16} />
-                <Text className={styles.sectionTitle}>{t('artworkStudio.composition.avatar')}</Text>
-              </Flexbox>
-              <Center className={`${styles.outputPreview} ${styles.outputPreviewAvatar}`}>
-                <Avatar
-                  avatar={avatar || undefined}
-                  key={avatarRemountKey(avatar)}
-                  shape={'square'}
-                  size={148}
+          <Flexbox
+            align={'center'}
+            className={styles.outputCard}
+            gap={10}
+            role={'button'}
+            tabIndex={0}
+            onClick={() => fullBodyInputRef.current && openFilePicker(fullBodyInputRef.current)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                if (fullBodyInputRef.current) openFilePicker(fullBodyInputRef.current);
+              }
+            }}
+          >
+            <Flexbox horizontal align={'center'} gap={6}>
+              <Icon icon={PersonStanding} size={16} />
+              <Text className={styles.sectionTitle}>{t('artworkStudio.composition.fullBody')}</Text>
+            </Flexbox>
+            <Center className={`${styles.outputPreview} ${styles.outputPreviewFullBody}`}>
+              {fullBody ? (
+                <img
+                  alt={t('artworkStudio.preview.fullBody')}
+                  className={styles.previewBodyImage}
+                  src={fullBody}
                 />
-                {renderGenerationOverlay('avatar')}
-              </Center>
-              <Flexbox horizontal className={styles.outputActions} gap={8}>
-                <Button icon={UploadIcon} loading={uploading} size={'small'} style={{ flex: 1 }}>
-                  {t('artworkStudio.upload')}
-                </Button>
-                <Button
-                  icon={WandSparkles}
-                  size={'small'}
-                  style={{ flex: 1 }}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onGenerate(style, 'avatar');
-                  }}
-                >
-                  {t('artworkStudio.generate.avatar')}
-                </Button>
-              </Flexbox>
+              ) : (
+                <Icon icon={PersonStanding} size={64} />
+              )}
+              {renderGenerationOverlay('fullBody')}
+            </Center>
+            <Flexbox horizontal className={styles.outputActions} gap={8}>
+              <Button icon={UploadIcon} loading={uploading} size={'small'} style={{ flex: 1 }}>
+                {t('artworkStudio.upload')}
+              </Button>
+              <Button
+                icon={WandSparkles}
+                size={'small'}
+                style={{ flex: 1 }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onGenerate(style, 'fullBody');
+                }}
+              >
+                {t('artworkStudio.generate.fullBody')}
+              </Button>
             </Flexbox>
-            <Flexbox
-              align={'center'}
-              className={styles.outputCard}
-              gap={10}
-              role={'button'}
-              tabIndex={0}
-              onClick={() => fullBodyInputRef.current && openFilePicker(fullBodyInputRef.current)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  if (fullBodyInputRef.current) openFilePicker(fullBodyInputRef.current);
-                }
-              }}
-            >
-              <Flexbox horizontal align={'center'} gap={6}>
-                <Icon icon={PersonStanding} size={16} />
-                <Text className={styles.sectionTitle}>
-                  {t('artworkStudio.composition.fullBody')}
-                </Text>
-              </Flexbox>
-              <Center className={`${styles.outputPreview} ${styles.outputPreviewFullBody}`}>
-                {fullBody ? (
-                  <img
-                    alt={t('artworkStudio.preview.fullBody')}
-                    className={styles.previewBodyImage}
-                    src={fullBody}
-                  />
-                ) : (
-                  <Icon icon={PersonStanding} size={64} />
-                )}
-                {renderGenerationOverlay('fullBody')}
-              </Center>
-              <Flexbox horizontal className={styles.outputActions} gap={8}>
-                <Button icon={UploadIcon} loading={uploading} size={'small'} style={{ flex: 1 }}>
-                  {t('artworkStudio.upload')}
-                </Button>
-                <Button
-                  icon={WandSparkles}
-                  size={'small'}
-                  style={{ flex: 1 }}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onGenerate(style, 'fullBody');
-                  }}
-                >
-                  {t('artworkStudio.generate.fullBody')}
-                </Button>
-              </Flexbox>
-            </Flexbox>
-          </div>
-        </Flexbox>
+          </Flexbox>
+        </div>
 
         {canGenerate ? (
           <>

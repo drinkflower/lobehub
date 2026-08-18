@@ -737,6 +737,7 @@ executionTarget: 'local'` in `agencyConfig`) + one message per case asking CC to
 - **Cause**: `signOperationJwt` → `getSigningKey()` → `getJwksKey()` needs the `JWKS_KEY` RSA JWK, and `init-dev-env.sh` does not export one.
 - **Works**: the repo ships a generator — `JWKS_KEY="$(node scripts/generate-oidc-jwk.mjs)" ./.agents/acceptance/scripts/init-dev-env.sh dev`. Must be present at dev-server **start** (it is read from `process.env`), so a running server has to be restarted.
 - **Note the failure is downstream-honest**: with `JWKS_KEY` set, the run proceeds and then fails at the hetero _sandbox_ (`Hetero sandbox spawn failed / unauthorized`) unless the agent has a real Claude Code token. Those are two different walls — don't read the second as the first.
+- **Same wall, other feature**: any async-task dispatch needs it too. Image generation (`lambda/image.createImage` → `createAsyncCaller`) records the task as `error` with `start async task error: JWKS_KEY environment variable is not set`, which surfaces in the UI only as a generic 「暂时无法生成图片，请重试」 — read `async_tasks.error` rather than the toast.
 
 ### E25. Electron `will-attach-webview` params carry NO custom attributes — identity via data-\* never arrives
 

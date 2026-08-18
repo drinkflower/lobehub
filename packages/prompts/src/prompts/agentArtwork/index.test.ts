@@ -147,6 +147,59 @@ describe('buildAgentArtworkPrompt', () => {
     expect(prompt).not.toContain('head fills most of the frame');
   });
 
+  it('asks every full-body style for one flat keyable backdrop', () => {
+    for (const style of AGENT_ARTWORK_STYLES) {
+      const prompt = buildAgentArtworkPrompt({
+        composition: 'fullBody',
+        id: 'agent-1',
+        kind: 'avatar',
+        style,
+      });
+
+      expect(prompt).toContain('completely flat, uniform background color that contrasts');
+      expect(prompt).toContain('keyed out cleanly');
+      // The per-style backdrop clauses would compete with the contrast requirement.
+      expect(prompt).not.toContain('matching solid-color background');
+      expect(prompt).not.toContain('vivid contrasting solid background color');
+      expect(prompt).not.toContain('pure white background');
+    }
+  });
+
+  it('bans the painted checkerboard that "transparent background" wording produces', () => {
+    const prompt = buildAgentArtworkPrompt({
+      composition: 'fullBody',
+      id: 'agent-1',
+      kind: 'avatar',
+      style: 'anime',
+    });
+
+    expect(prompt).toContain('Never draw a checkerboard');
+    expect(prompt).not.toContain('transparent background');
+  });
+
+  it('keeps the avatar composition on its solid background', () => {
+    const prompt = buildAgentArtworkPrompt({
+      composition: 'avatar',
+      id: 'agent-1',
+      kind: 'avatar',
+    });
+
+    expect(prompt).toContain('one vivid contrasting solid background color');
+    expect(prompt).not.toContain('keyed out cleanly');
+  });
+
+  it('keeps the mascot character wording when the lobe backdrop clause is dropped', () => {
+    const prompt = buildAgentArtworkPrompt({
+      composition: 'fullBody',
+      id: 'agent-1',
+      kind: 'avatar',
+      style: 'lobe',
+    });
+
+    expect(prompt).toContain('mascot-style 3D emoji character');
+    expect(prompt).toContain('soft studio lighting. Express the identity');
+  });
+
   it('keeps style references compatible with a full-body composition', () => {
     const prompt = buildAgentArtworkPrompt({
       composition: 'fullBody',
@@ -172,6 +225,7 @@ describe('buildAgentArtworkPrompt', () => {
     expect(prompt).toContain('existing avatar as the exact character source of truth');
     expect(prompt).toContain('same identity, face, hair, outfit');
     expect(prompt).toContain('Do not redesign or reinterpret the character');
+    expect(prompt).toContain("ignore the avatar's background entirely");
     expect(prompt).not.toContain('existing profile background');
   });
 
