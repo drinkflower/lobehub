@@ -31,6 +31,7 @@ export const shareRouter = router({
           slug: share.agentSlug,
           title: share.agentTitle,
         },
+        isOwner: share.ownerId === ctx.userId,
         shareId: share.shareId,
         visibility: share.visibility as SharedAgentData['visibility'],
       };

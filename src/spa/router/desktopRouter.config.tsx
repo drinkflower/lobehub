@@ -7,6 +7,7 @@ import {
   verifyReportsRouteMeta,
   verifyRouteMeta,
 } from '@/features/Verify/routeMeta';
+import { shareAgentRouteMeta } from '@/routes/share/a/[id]/routeMeta';
 import { sharePageRouteMeta } from '@/routes/share/page/[id]/routeMeta';
 import { shareTopicRouteMeta } from '@/routes/share/t/[id]/routeMeta';
 import { loadRouteWithBuiltinToolSurfaces } from '@/spa/initialize/toolSurfaces';
@@ -42,6 +43,25 @@ const webOnlyRoutes: RouteObject[] = [
       'Desktop > Share > Topic > Layout',
     ),
     path: '/share/t',
+  },
+
+  // Agent share visitor route (outside main layout)
+  {
+    children: [
+      {
+        element: dynamicElement(
+          () => loadRouteWithBuiltinToolSurfaces(() => import('@/routes/share/a/[id]')),
+          'Desktop > Share > Agent',
+        ),
+        handle: { meta: shareAgentRouteMeta },
+        path: ':id',
+      },
+    ],
+    element: dynamicElement(
+      () => import('@/routes/share/a/[id]/_layout'),
+      'Desktop > Share > Agent > Layout',
+    ),
+    path: '/share/a',
   },
 
   // Share page route (outside main layout)

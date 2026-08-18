@@ -86,6 +86,7 @@ describe('shareRouter', () => {
           slug: 'shared-agent',
           title: 'Research Assistant',
         },
+        isOwner: false,
         shareId: agentShare.shareId,
         visibility: 'link',
       });
@@ -111,6 +112,7 @@ describe('shareRouter', () => {
       const caller = shareRouter.createCaller(await createContextInner({ userId: 'owner-user' }));
 
       await expect(caller.getSharedAgent({ shareId: agentShare.shareId })).resolves.toMatchObject({
+        isOwner: true,
         visibility: 'private',
       });
       expect(AgentShareModel.findByShareIdWithAccessCheck).toHaveBeenCalledWith(

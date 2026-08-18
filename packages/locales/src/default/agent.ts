@@ -433,6 +433,9 @@ export default {
   'share.visibility.private': 'Private',
   'share.visibility.privateHint': 'Only you can access this agent for now.',
   'share.visibilityUpdated': 'Share visibility updated',
+  'share.visitor.sendDisabled': 'Sending messages to this shared agent is not available yet',
+  'share.visitor.topics.empty': 'No conversations yet',
+  'share.visitor.topics.title': 'Conversations',
 
   'transfer.title': 'Move',
   'transfer.copyTo': 'Copy to…',

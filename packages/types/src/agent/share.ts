@@ -12,6 +12,8 @@ export interface SharedAgentData {
     slug: string | null;
     title: string | null;
   };
+  /** Whether the requesting user is the creator of the shared agent. */
+  isOwner: boolean;
   shareId: string;
   visibility: ShareVisibility;
 }
