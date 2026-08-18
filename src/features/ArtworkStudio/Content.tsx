@@ -1,15 +1,19 @@
 'use client';
 
 import { imageUrl } from '@lobechat/const';
-import {
-  AGENT_ARTWORK_STYLES,
-  type AgentArtworkStyle,
-  DEFAULT_AGENT_ARTWORK_STYLE,
-} from '@lobechat/prompts';
-import { Alert, Avatar, Center, Flexbox, Icon, Tag, Text } from '@lobehub/ui';
-import { Button, useModalContext } from '@lobehub/ui/base-ui';
+import type { AgentArtworkComposition, AgentArtworkStyle } from '@lobechat/prompts';
+import { AGENT_ARTWORK_STYLES } from '@lobechat/prompts';
+import { Alert, Avatar, Center, Flexbox, Icon, Text } from '@lobehub/ui';
+import { Button, Segmented, useModalContext } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { Check, SettingsIcon, UploadIcon, WandSparkles } from 'lucide-react';
+import {
+  Check,
+  CircleUserRound,
+  PersonStanding,
+  SettingsIcon,
+  UploadIcon,
+  WandSparkles,
+} from 'lucide-react';
 import { memo, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -21,7 +25,7 @@ import { aiProviderSelectors } from '@/store/aiInfra/selectors';
 
 import { LOBE_STYLE_REFERENCE_IMAGE_URLS } from './styleReferences';
 
-const GALLERY_STYLES = AGENT_ARTWORK_STYLES.filter((item) => item !== 'lobe');
+const GALLERY_STYLES = AGENT_ARTWORK_STYLES;
 
 const styles = createStaticStyles(({ css }) => ({
   galleryCheck: css`
@@ -47,11 +51,22 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   galleryItem: css`
     cursor: pointer;
+
+    padding: 4px;
+    border: 1px solid transparent;
     border-radius: ${cssVar.borderRadiusLG};
+
+    transition:
+      border-color ${cssVar.motionDurationFast},
+      background ${cssVar.motionDurationFast};
 
     &:hover img {
       filter: brightness(1.06);
     }
+  `,
+  galleryItemActive: css`
+    border-color: ${cssVar.colorPrimary};
+    background: ${cssVar.colorFillTertiary};
   `,
   galleryLabel: css`
     font-size: 12px;
@@ -84,22 +99,8 @@ const styles = createStaticStyles(({ css }) => ({
     font-size: 13px;
     color: ${cssVar.colorTextSecondary};
   `,
-  lobeCard: css`
-    cursor: pointer;
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillQuaternary};
-    transition: background ${cssVar.motionDurationFast};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  lobeCardActive: css`
-    background: ${cssVar.colorFillSecondary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
+  modeControl: css`
+    width: 100%;
   `,
   noModelBlock: css`
     border-radius: ${cssVar.borderRadiusLG};
@@ -115,6 +116,11 @@ const styles = createStaticStyles(({ css }) => ({
     border-radius: ${cssVar.borderRadiusLG};
 
     background: ${cssVar.colorFillQuaternary};
+  `,
+  previewBodyImage: css`
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   `,
   sectionTitle: css`
     font-weight: 500;
@@ -146,7 +152,7 @@ export interface ArtworkStudioContentProps {
   /** True when the last generation attempt failed and can be retried. */
   generationFailed?: boolean;
   onCancel: () => void;
-  onGenerate: (style: AgentArtworkStyle) => void;
+  onGenerate: (style: AgentArtworkStyle, composition: AgentArtworkComposition) => void;
   onUpload: (file: File) => void;
   uploading?: boolean;
 }
@@ -178,7 +184,8 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
     );
 
     const uploadInputRef = useRef<HTMLInputElement>(null);
-    const [style, setStyle] = useState<AgentArtworkStyle>(DEFAULT_AGENT_ARTWORK_STYLE);
+    const [style, setStyle] = useState<AgentArtworkStyle>('anime');
+    const [composition, setComposition] = useState<AgentArtworkComposition>('avatar');
 
     const selectStyle = useCallback((next: AgentArtworkStyle) => setStyle(next), []);
 
@@ -197,17 +204,29 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
         {/* DIY path: the live avatar plus upload. The preview doubles as the
             generation stage so both paths land on the same picture. */}
         <Flexbox gap={16} style={{ flex: 'none', width: 232 }}>
-          <Center className={styles.preview} height={232} width={232}>
+          <Center
+            className={styles.preview}
+            height={composition === 'fullBody' ? 300 : 232}
+            width={232}
+          >
             {/* Keyed by the url: Avatar latches an internal `isImgError` on the
                 first failed load and never clears it when `avatar` changes, so a
                 previously broken avatar would keep the freshly generated one
                 invisible until a reload. */}
-            <Avatar
-              avatar={avatar || undefined}
-              key={avatarRemountKey(avatar)}
-              shape={'square'}
-              size={180}
-            />
+            {composition === 'fullBody' && avatar ? (
+              <img
+                alt={t('artworkStudio.preview.fullBody')}
+                className={styles.previewBodyImage}
+                src={avatar}
+              />
+            ) : (
+              <Avatar
+                avatar={avatar || undefined}
+                key={avatarRemountKey(avatar)}
+                shape={'square'}
+                size={180}
+              />
+            )}
             {generating ? (
               <Center className={styles.generationOverlay}>
                 <Flexbox align={'center'} gap={10}>
@@ -246,7 +265,7 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
           </Flexbox>
         </Flexbox>
 
-        {/* One-click path: brand style first, then the generated style gallery. */}
+        {/* One-click path: choose composition first, then a peer-level style. */}
         <Flexbox gap={16} style={{ flex: 1, minWidth: 280 }}>
           <Flexbox gap={4}>
             <Text className={styles.sectionTitle}>{t('artworkStudio.generateTitle')}</Text>
@@ -255,49 +274,39 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
 
           {canGenerate ? (
             <>
-              <Flexbox
-                horizontal
-                align={'center'}
-                className={`${styles.lobeCard} ${style === 'lobe' ? styles.lobeCardActive : ''}`}
-                gap={12}
-                padding={12}
-                role={'button'}
-                tabIndex={0}
-                onClick={() => selectStyle('lobe')}
-                onKeyDown={keySelect('lobe')}
-              >
-                <Flexbox horizontal flex={'none'} gap={4}>
-                  {LOBE_STYLE_REFERENCE_IMAGE_URLS.map((url) => (
-                    <Avatar avatar={url} key={url} shape={'square'} size={40} />
-                  ))}
-                </Flexbox>
-                <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-                  <Flexbox horizontal align={'center'} gap={8}>
-                    <Text className={styles.sectionTitle}>{t('artworkStudio.lobeStyle')}</Text>
-                    <Tag color={'processing'} size={'small'}>
-                      {t('artworkStudio.recommended')}
-                    </Tag>
-                  </Flexbox>
-                  <Text ellipsis className={styles.hint}>
-                    {t('artworkStudio.style.lobe')}
+              <Flexbox gap={8}>
+                <Flexbox gap={2}>
+                  <Text className={styles.sectionTitle}>
+                    {t('artworkStudio.composition.title')}
                   </Text>
+                  <Text className={styles.hint}>{t('artworkStudio.composition.hint')}</Text>
                 </Flexbox>
-                {style === 'lobe' ? (
-                  <Icon
-                    color={cssVar.colorPrimary}
-                    icon={Check}
-                    size={18}
-                    style={{ flex: 'none' }}
-                  />
-                ) : null}
+                <Segmented<AgentArtworkComposition>
+                  block
+                  className={styles.modeControl}
+                  value={composition}
+                  options={[
+                    {
+                      icon: <Icon icon={CircleUserRound} size={16} />,
+                      label: t('artworkStudio.composition.avatar'),
+                      value: 'avatar',
+                    },
+                    {
+                      icon: <Icon icon={PersonStanding} size={16} />,
+                      label: t('artworkStudio.composition.fullBody'),
+                      value: 'fullBody',
+                    },
+                  ]}
+                  onChange={setComposition}
+                />
               </Flexbox>
 
               <Flexbox gap={8}>
-                <Text className={styles.hint}>{t('artworkStudio.moreStyles')}</Text>
+                <Text className={styles.sectionTitle}>{t('artworkStudio.style.title')}</Text>
                 <div className={styles.galleryGrid}>
                   {GALLERY_STYLES.map((item) => (
                     <Flexbox
-                      className={styles.galleryItem}
+                      className={`${styles.galleryItem} ${style === item ? styles.galleryItemActive : ''}`}
                       gap={6}
                       key={item}
                       role={'button'}
@@ -309,7 +318,11 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                         <img
                           alt={t(`artworkStudio.style.${item}`)}
                           className={styles.galleryThumb}
-                          src={imageUrl(`agent-artwork-styles/style-${item}.webp`)}
+                          src={
+                            item === 'lobe'
+                              ? LOBE_STYLE_REFERENCE_IMAGE_URLS[0]
+                              : imageUrl(`agent-artwork-styles/style-${item}.webp`)
+                          }
                         />
                         {style === item ? (
                           <Center className={styles.galleryCheck}>
@@ -330,9 +343,13 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                   disabled={generating}
                   icon={WandSparkles}
                   type={'primary'}
-                  onClick={() => onGenerate(style)}
+                  onClick={() => onGenerate(style, composition)}
                 >
-                  {t('artworkStudio.generate')}
+                  {t(
+                    composition === 'fullBody'
+                      ? 'artworkStudio.generate.fullBody'
+                      : 'artworkStudio.generate.avatar',
+                  )}
                 </Button>
                 {generationFailed ? (
                   <Alert showIcon title={t('artworkStudio.generateFailed')} type={'error'} />

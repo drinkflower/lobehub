@@ -1,6 +1,6 @@
 'use client';
 
-import type { AgentArtworkStyle } from '@lobechat/prompts';
+import type { AgentArtworkComposition, AgentArtworkStyle } from '@lobechat/prompts';
 import { toast } from '@lobehub/ui/base-ui';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -37,8 +37,9 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
   const generationFailed = generation?.status === 'error' && generation.kind === 'avatar';
 
   const generate = useCallback(
-    (nextStyle: AgentArtworkStyle) => {
+    (nextStyle: AgentArtworkStyle, composition: AgentArtworkComposition) => {
       generateAgentArtwork({
+        composition,
         description: meta.description,
         id: agentId,
         kind: 'avatar',

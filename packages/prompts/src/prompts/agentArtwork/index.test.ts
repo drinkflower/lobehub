@@ -21,7 +21,7 @@ describe('buildAgentArtworkPrompt', () => {
     );
     expect(prompt).toContain('<description>Helps with TypeScript &amp; React</description>');
     expect(prompt).toContain('full-bleed composition');
-    expect(prompt).toContain('square profile icon');
+    expect(prompt).toContain('square character image');
   });
 
   it('includes the system role in a wide background prompt', () => {
@@ -116,7 +116,7 @@ describe('buildAgentArtworkPrompt', () => {
     expect(new Set(prompts).size).toBe(AGENT_ARTWORK_STYLES.length);
     expect(prompts.find((p) => p.includes('Japanese anime'))).toBeTruthy();
     expect(prompts.find((p) => p.includes('minimalist hand-drawn line art'))).toBeTruthy();
-    expect(prompts.find((p) => p.includes('professional headshot'))).toBeTruthy();
+    expect(prompts.find((p) => p.includes('64 x 64 pixel grid'))).toBeTruthy();
   });
 
   it('applies the chosen style to both avatar and background prompts', () => {
@@ -129,6 +129,32 @@ describe('buildAgentArtworkPrompt', () => {
 
     expect(avatar).toContain('hand-painted texture');
     expect(background).toContain('hand-painted texture');
+  });
+
+  it('supports a full-body character composition', () => {
+    const prompt = buildAgentArtworkPrompt({
+      composition: 'fullBody',
+      id: 'agent-1',
+      kind: 'avatar',
+      style: 'anime',
+    });
+
+    expect(prompt).toContain('complete head-to-toe character image');
+    expect(prompt).toContain('entire body clearly');
+    expect(prompt).not.toContain('head fills most of the frame');
+  });
+
+  it('keeps style references compatible with a full-body composition', () => {
+    const prompt = buildAgentArtworkPrompt({
+      composition: 'fullBody',
+      id: 'agent-1',
+      kind: 'avatar',
+      style: 'lineArt',
+      styleReferenceImageUrls: ['https://example.com/line-art.webp'],
+    });
+
+    expect(prompt).toContain('character design, line quality');
+    expect(prompt).not.toContain('mascot-like head-dominant look');
   });
 
   it('steers the motif away from generic technology clichés in every prompt', () => {

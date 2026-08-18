@@ -1,15 +1,9 @@
 import { escapeXmlAttr, escapeXmlContent } from '../search/xmlEscape';
 
 export type AgentArtworkKind = 'avatar' | 'background';
+export type AgentArtworkComposition = 'avatar' | 'fullBody';
 
-export const AGENT_ARTWORK_STYLES = [
-  'lobe',
-  'anime',
-  'lineArt',
-  'professional',
-  'pixel',
-  'painterly',
-] as const;
+export const AGENT_ARTWORK_STYLES = ['lobe', 'anime', 'lineArt', 'pixel', 'painterly'] as const;
 
 export type AgentArtworkStyle = (typeof AGENT_ARTWORK_STYLES)[number];
 
@@ -24,16 +18,14 @@ export const DEFAULT_AGENT_ARTWORK_STYLE: AgentArtworkStyle = 'lobe';
  */
 const STYLE_DIRECTIONS: Record<AgentArtworkStyle, string> = {
   anime:
-    'Render it in an expressive FLCL-inspired Japanese anime style. Choose an age and character archetype that fits the agent, such as a young boy, a playful young woman, a mature onee-san, or a handsome older man. Let the head fill the frame with only a little upper body visible, against a matching solid-color background with no decorations.',
+    'Render it in an expressive FLCL-inspired Japanese anime style. Choose an age and character archetype that fits the agent, such as a young boy, a playful young woman, a mature onee-san, or a handsome older man. Use a matching solid-color background with no decorations.',
   lineArt:
-    "Render it as minimalist hand-drawn line art. Let the head fill the frame with a little upper body visible, and use the pose and styling to communicate the agent's professional traits. Use a pure white background.",
-  lobe: "Render it as a bold mascot-style 3D emoji character: a single oversized head filling most of the frame, skin in one friendly likeable color that people love — warm yellow, orange, peach, coral, or soft brown (not realistic human skin, and never odd tones like green, teal, or gray), graphic simplified facial features with an expression that matches the agent's personality (a knowing wink, a curious smile, a warm grin — lively, never blank or babyish), glossy candy-like materials with soft studio lighting, and one vivid contrasting solid background color. Show at most a hint of shoulders. Express the identity through a hat and one or two small floating accessory props beside the head — do not draw scenes, maps, or diagrams on the character.",
+    "Render it as minimalist hand-drawn line art. Use the pose and styling to communicate the agent's professional traits. Use a pure white background.",
+  lobe: "Render it as a bold mascot-style 3D emoji character: skin in one friendly likeable color that people love — warm yellow, orange, peach, coral, or soft brown (not realistic human skin, and never odd tones like green, teal, or gray), graphic simplified facial features with an expression that matches the agent's personality (a knowing wink, a curious smile, a warm grin — lively, never blank or babyish), glossy candy-like materials with soft studio lighting, and one vivid contrasting solid background color. Express the identity through a hat and one or two small accessory props — do not draw scenes, maps, or diagrams on the character.",
   painterly:
-    'Render it with a cinematic 3D-to-2D hand-painted texture and dramatic stylization inspired by premium animated fantasy series. Let the head fill the frame with a little upper body visible, against a matching solid-color background.',
+    'Render it with a cinematic 3D-to-2D hand-painted texture and dramatic stylization inspired by premium animated fantasy series, against a matching solid-color background.',
   pixel:
-    'Render it as crisp pixel art on a 64 x 64 pixel grid. Let the head fill the frame with a little upper body visible, against a matching solid-color background with no decorations.',
-  professional:
-    'Render it as a realistic LinkedIn-style professional headshot with a polished international executive look and natural diversity in ethnicity and gender. Let the head fill the frame with a little upper body visible. Use a pure white background.',
+    'Render it as crisp pixel art on a 64 x 64 pixel grid, against a matching solid-color background with no decorations.',
 };
 
 /**
@@ -55,6 +47,10 @@ const BACKGROUND_STYLE_OVERRIDES: Partial<Record<AgentArtworkStyle, string>> = {
 const MOTIF_DIRECTION = `Ground the imagery in the agent's specific domain and personality. Avoid generic AI and technology clichés — starry space scenes, glowing particles, circuit boards, neural-network lines, holographic grids — unless the agent's subject matter is explicitly about them.`;
 
 const AVATAR_CANVAS_DIRECTION = `Fill the entire square canvas edge to edge with the artwork: use a full-bleed composition with no white background, no white matte, no empty margin, no padding, no frame, and no border. No words, no letters, and no logo. The result must remain clear as a small app avatar.`;
+const FULL_BODY_CANVAS_DIRECTION = `Use the entire square canvas for a clean character presentation with a simple background, no frame, no border, no words, no letters, and no logo.`;
+
+const AVATAR_COMPOSITION_DIRECTION = `Compose a close-up avatar: the head fills most of the frame, with at most a little of the upper body visible.`;
+const FULL_BODY_COMPOSITION_DIRECTION = `Compose a complete head-to-toe character image: show the entire body clearly, centered in a natural standing or action pose, with comfortable breathing room around the silhouette. Keep the face expressive and readable.`;
 
 /**
  * `character` is for avatars, where the references define the TARGET subject
@@ -65,7 +61,7 @@ const AVATAR_CANVAS_DIRECTION = `Fill the entire square canvas edge to edge with
  */
 const buildStyleReferenceDirection = (
   count: number,
-  mode: 'character' | 'surface',
+  mode: 'character' | 'fullBodyCharacter' | 'surface',
   subject: string,
 ): string => {
   if (count === 0) return '';
@@ -73,15 +69,22 @@ const buildStyleReferenceDirection = (
   const imageWord = count === 1 ? 'image' : 'images';
   const possessive = count === 1 ? 'its' : 'their';
 
-  return mode === 'character'
-    ? `\n\nUse the attached ${imageWord} as the target character style — the same mascot-like head-dominant look, single-color skin, material, lighting, and color energy. Do not copy ${possessive} exact faces, hats, or subjects — invent a new character for the ${subject} described above.`
-    : `\n\nUse the attached ${imageWord} only as a rendering-style reference — match ${possessive} materials, lighting, color saturation, and level of finish. Do not copy ${possessive} subjects or compositions.`;
+  if (mode === 'surface')
+    return `\n\nUse the attached ${imageWord} only as a rendering-style reference — match ${possessive} materials, lighting, color saturation, and level of finish. Do not copy ${possessive} subjects or compositions.`;
+
+  const compositionQualities =
+    mode === 'fullBodyCharacter'
+      ? 'character design, line quality, materials, lighting, and color energy'
+      : 'mascot-like head-dominant look, single-color skin, material, lighting, and color energy';
+
+  return `\n\nUse the attached ${imageWord} as the target character style — the same ${compositionQualities}. Do not copy ${possessive} exact faces, hats, or subjects — invent a new character for the ${subject} described above.`;
 };
 
 const countStyleReferences = (urls?: string[] | null): number =>
   urls?.filter((url) => url.trim()).length ?? 0;
 
 export interface AgentArtworkPromptInput {
+  composition?: AgentArtworkComposition;
   description?: string | null;
   id: string;
   kind: AgentArtworkKind;
@@ -128,6 +131,7 @@ export const buildAgentArtworkPrompt = (input: AgentArtworkPromptInput): string 
     title: input.title,
   });
   const style = input.style ?? DEFAULT_AGENT_ARTWORK_STYLE;
+  const composition = input.composition ?? 'avatar';
   const styleDirection =
     input.kind === 'background'
       ? (BACKGROUND_STYLE_OVERRIDES[style] ?? STYLE_DIRECTIONS[style])
@@ -136,7 +140,11 @@ export const buildAgentArtworkPrompt = (input: AgentArtworkPromptInput): string 
   const styleReferenceCount = countStyleReferences(input.styleReferenceImageUrls);
   const styleReferenceDirection = buildStyleReferenceDirection(
     styleReferenceCount,
-    input.kind === 'avatar' ? 'character' : 'surface',
+    input.kind === 'background'
+      ? 'surface'
+      : composition === 'fullBody'
+        ? 'fullBodyCharacter'
+        : 'character',
     'agent',
   );
   const counterpartReferenceUrl = styleReferenceCount > 0 ? undefined : input.referenceImageUrl;
@@ -149,11 +157,16 @@ export const buildAgentArtworkPrompt = (input: AgentArtworkPromptInput): string 
       ? `\n\nUse the attached existing profile background as the visual source of truth. Preserve its dominant color palette, materials, lighting, atmosphere, and recurring motifs while distilling them into a single avatar subject. The avatar must feel designed as part of the same identity system, not merely depict a related topic.`
       : '';
 
-    return `Create a distinctive square profile icon for the AI agent described below.
+    const compositionDirection =
+      composition === 'fullBody' ? FULL_BODY_COMPOSITION_DIRECTION : AVATAR_COMPOSITION_DIRECTION;
+    const canvasDirection =
+      composition === 'fullBody' ? FULL_BODY_CANVAS_DIRECTION : AVATAR_CANVAS_DIRECTION;
+
+    return `Create a distinctive square character image for the AI agent described below.
 
 ${agentContext}
 
-Translate the agent's identity, purpose, and personality into one coherent visual concept. Use a single centered subject with a simple silhouette. ${styleDirection} ${MOTIF_DIRECTION} ${AVATAR_CANVAS_DIRECTION}${styleReferenceDirection}${referenceDirection}`;
+Translate the agent's identity, purpose, and personality into one coherent visual concept. Use a single centered subject with a simple silhouette. ${compositionDirection} ${styleDirection} ${MOTIF_DIRECTION} ${canvasDirection}${styleReferenceDirection}${referenceDirection}`;
   }
 
   const referenceDirection = counterpartReferenceUrl?.trim()
