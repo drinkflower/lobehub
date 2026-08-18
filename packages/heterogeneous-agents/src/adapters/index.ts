@@ -6,6 +6,7 @@ export { CodexAppServerAdapter } from './codexAppServer';
 export { CursorAdapter } from './cursor';
 export { GrokBuildAdapter } from './grokBuild';
 export { KimiCodeAdapter } from './kimiCode';
+export { MinimaxCodeAcpAdapter } from './minimaxCodeAcp';
 export { OpenCodeAdapter } from './opencode';
 export { PiAdapter } from './pi';
 export { QoderAdapter } from './qoder';

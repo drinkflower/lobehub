@@ -14,6 +14,7 @@ import {
   CursorAdapter,
   GrokBuildAdapter,
   KimiCodeAdapter,
+  MinimaxCodeAcpAdapter,
   OpenCodeAdapter,
   PiAdapter,
   QoderAdapter,
@@ -47,6 +48,9 @@ const localAgentRegistry = {
   },
   'kimi-code': {
     createAdapter: () => new KimiCodeAdapter(),
+  },
+  'minimax-code': {
+    createAdapter: () => new MinimaxCodeAcpAdapter(),
   },
   'opencode': {
     createAdapter: () => new OpenCodeAdapter(),
