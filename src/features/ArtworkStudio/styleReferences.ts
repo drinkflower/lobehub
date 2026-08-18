@@ -14,15 +14,15 @@ export const LOBE_STYLE_REFERENCE_IMAGE_URLS = CHIEF_AGENT_ARTWORKS.filter((item
   REFERENCE_IDS.has(item.id),
 ).map((item) => item.avatar);
 
-const lineArtReferenceImageUrl = () =>
-  new URL(
-    imageUrl('agent-artwork-styles/line-art-reference.webp'),
-    window.location.origin,
-  ).toString();
+const lineArtReferenceImageUrl = (appOrigin: string) =>
+  new URL(imageUrl('agent-artwork-styles/line-art-reference.webp'), appOrigin).toString();
 
-export const styleReferencesForArtworkStyle = (style: AgentArtworkStyle): string[] | undefined =>
+export const styleReferencesForArtworkStyle = (
+  style: AgentArtworkStyle,
+  appOrigin?: string,
+): string[] | undefined =>
   style === 'lobe'
     ? LOBE_STYLE_REFERENCE_IMAGE_URLS
-    : style === 'lineArt'
-      ? [lineArtReferenceImageUrl()]
+    : style === 'lineArt' && appOrigin
+      ? [lineArtReferenceImageUrl(appOrigin)]
       : undefined;

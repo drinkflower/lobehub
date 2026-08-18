@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import { resolveAgentBackground } from '@/features/AgentProfileArtwork/utils';
 import { ArtworkStudioContent, styleReferencesForArtworkStyle } from '@/features/ArtworkStudio';
+import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { useAgentStore } from '@/store/agent';
 import { agentArtworkSelectors, agentSelectors } from '@/store/agent/selectors';
 import { useFileStore } from '@/store/file';
@@ -19,6 +20,7 @@ interface AgentArtworkStudioContentProps {
 
 const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentId }) => {
   const { t } = useTranslation('setting');
+  const appOrigin = useAppOrigin();
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
   const systemRole = useAgentStore(
     (s) => agentSelectors.getAgentConfigById(agentId)(s)?.systemRole,
@@ -43,7 +45,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
         name: meta.name,
         referenceImageUrl: resolveAgentBackground(meta.backgroundColor),
         style: nextStyle,
-        styleReferenceImageUrls: styleReferencesForArtworkStyle(nextStyle),
+        styleReferenceImageUrls: styleReferencesForArtworkStyle(nextStyle, appOrigin),
         systemRole,
         title: meta.title,
       }).catch(() => {
@@ -52,6 +54,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
     },
     [
       agentId,
+      appOrigin,
       generateAgentArtwork,
       meta.backgroundColor,
       meta.description,
