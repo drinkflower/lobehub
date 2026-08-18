@@ -1,4 +1,5 @@
 import type {
+  AgentProfile,
   LobeAgentAgencyConfig,
   LobeAgentChatConfig,
   LobeAgentTTSConfig,
@@ -52,6 +53,17 @@ export const agents = pgTable(
     avatar: text('avatar'),
     backgroundColor: text('background_color'),
     marketIdentifier: text('market_identifier'),
+    /**
+     * The agent's character sheet — traits and artwork. One bag instead of a
+     * column per trait; nothing in it is ever queried. See `AgentProfile`.
+     */
+    profile: jsonb('profile').$type<AgentProfile>(),
+    /**
+     * Owning society (agent org). Left without a foreign key until the
+     * societies table exists; a plain column because agents are listed and
+     * filtered by it — index it together with the first query that does.
+     */
+    societyId: text('society_id'),
 
     plugins: jsonb('plugins').$type<string[]>(),
 

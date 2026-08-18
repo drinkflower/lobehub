@@ -7,6 +7,7 @@ import type { FewShots } from '../llm';
 import type { LobeAgentAgencyConfig } from './agencyConfig';
 import { AgentChatConfigSchema, type LobeAgentChatConfig } from './chatConfig';
 import { type AgentPluginEntry, AgentPluginEntrySchema } from './pluginConfig';
+import type { AgentProfile } from './profile';
 import type { LobeAgentTTSConfig } from './tts';
 
 /**
@@ -170,10 +171,18 @@ export interface AgentItem {
   openingQuestions?: string[];
   params?: any;
   plugins?: AgentPluginEntry[];
+  /** Character sheet — traits and artwork; see {@link AgentProfile}. */
+  profile?: AgentProfile | null;
   provider?: string | null;
   /** Session group ID for direct grouping */
   sessionGroupId?: string | null;
   slug?: string | null;
+  /**
+   * The society (agent org) this agent belongs to, or `null` for a standalone
+   * one. A real column rather than a metadata key: agents get listed and
+   * filtered by it.
+   */
+  societyId?: string | null;
   systemRole?: string | null;
   tags?: string[];
   title?: string | null;

@@ -9,6 +9,8 @@ table agents {
   avatar text
   background_color text
   market_identifier text
+  profile jsonb
+  society_id text
   plugins jsonb
   client_id text
   user_id text [not null]
