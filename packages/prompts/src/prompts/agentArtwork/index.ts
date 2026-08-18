@@ -4,11 +4,11 @@ export type AgentArtworkKind = 'avatar' | 'background';
 
 export const AGENT_ARTWORK_STYLES = [
   'lobe',
-  'clay',
-  'watercolor',
-  'geometric',
+  'anime',
+  'lineArt',
+  'professional',
   'pixel',
-  'sticker',
+  'painterly',
 ] as const;
 
 export type AgentArtworkStyle = (typeof AGENT_ARTWORK_STYLES)[number];
@@ -23,16 +23,17 @@ export const DEFAULT_AGENT_ARTWORK_STYLE: AgentArtworkStyle = 'lobe';
  * through outfit and accessories instead.
  */
 const STYLE_DIRECTIONS: Record<AgentArtworkStyle, string> = {
-  clay: 'Render it as a soft 3D clay-style figure with rounded forms, matte materials, subtle hand-made charm, gentle studio lighting, and warm pastel colors.',
-  geometric:
-    'Render it as flat geometric illustration built from bold simple shapes, crisp edges, and a confident limited palette in the spirit of mid-century poster design.',
+  anime:
+    'Render it in an expressive FLCL-inspired Japanese anime style. Choose an age and character archetype that fits the agent, such as a young boy, a playful young woman, a mature onee-san, or a handsome older man. Let the head fill the frame with only a little upper body visible, against a matching solid-color background with no decorations.',
+  lineArt:
+    "Render it as minimalist hand-drawn line art. Let the head fill the frame with a little upper body visible, and use the pose and styling to communicate the agent's professional traits. Use a pure white background.",
   lobe: "Render it as a bold mascot-style 3D emoji character: a single oversized head filling most of the frame, skin in one friendly likeable color that people love — warm yellow, orange, peach, coral, or soft brown (not realistic human skin, and never odd tones like green, teal, or gray), graphic simplified facial features with an expression that matches the agent's personality (a knowing wink, a curious smile, a warm grin — lively, never blank or babyish), glossy candy-like materials with soft studio lighting, and one vivid contrasting solid background color. Show at most a hint of shoulders. Express the identity through a hat and one or two small floating accessory props beside the head — do not draw scenes, maps, or diagrams on the character.",
+  painterly:
+    'Render it with a cinematic 3D-to-2D hand-painted texture and dramatic stylization inspired by premium animated fantasy series. Let the head fill the frame with a little upper body visible, against a matching solid-color background.',
   pixel:
-    'Render it as crisp retro pixel art with chunky readable pixels, a limited bright palette, and clean shading in the spirit of classic 16-bit games.',
-  sticker:
-    'Render it as a glossy die-cut sticker illustration with bold clean outlines, flat vivid colors, a thick white sticker border, and a simple bright solid background.',
-  watercolor:
-    'Render it as a hand-painted watercolor piece with visible paper texture, soft pigment washes, and loose organic edges.',
+    'Render it as crisp pixel art on a 64 x 64 pixel grid. Let the head fill the frame with a little upper body visible, against a matching solid-color background with no decorations.',
+  professional:
+    'Render it as a realistic LinkedIn-style professional headshot with a polished international executive look and natural diversity in ethnicity and gender. Let the head fill the frame with a little upper body visible. Use a pure white background.',
 };
 
 /**

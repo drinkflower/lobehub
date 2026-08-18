@@ -114,21 +114,21 @@ describe('buildAgentArtworkPrompt', () => {
     );
 
     expect(new Set(prompts).size).toBe(AGENT_ARTWORK_STYLES.length);
-    expect(prompts.find((p) => p.includes('watercolor'))).toBeTruthy();
-    expect(prompts.find((p) => p.includes('pixel art'))).toBeTruthy();
-    expect(prompts.find((p) => p.includes('die-cut sticker'))).toBeTruthy();
+    expect(prompts.find((p) => p.includes('Japanese anime'))).toBeTruthy();
+    expect(prompts.find((p) => p.includes('minimalist hand-drawn line art'))).toBeTruthy();
+    expect(prompts.find((p) => p.includes('professional headshot'))).toBeTruthy();
   });
 
   it('applies the chosen style to both avatar and background prompts', () => {
-    const avatar = buildAgentArtworkPrompt({ id: 'agent-1', kind: 'avatar', style: 'clay' });
+    const avatar = buildAgentArtworkPrompt({ id: 'agent-1', kind: 'avatar', style: 'painterly' });
     const background = buildAgentArtworkPrompt({
       id: 'agent-1',
       kind: 'background',
-      style: 'clay',
+      style: 'painterly',
     });
 
-    expect(avatar).toContain('clay-style figure');
-    expect(background).toContain('clay-style figure');
+    expect(avatar).toContain('hand-painted texture');
+    expect(background).toContain('hand-painted texture');
   });
 
   it('steers the motif away from generic technology clichés in every prompt', () => {
@@ -144,10 +144,10 @@ describe('buildAgentArtworkPrompt', () => {
       id: 'designer',
       kind: 'background',
       referenceImageUrl: 'https://example.com/avatar.png',
-      style: 'watercolor',
+      style: 'lineArt',
     });
 
-    expect(prompt).toContain('hand-painted watercolor');
+    expect(prompt).toContain('minimalist hand-drawn line art');
     expect(prompt).not.toContain('illustration style');
   });
 });

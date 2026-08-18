@@ -309,7 +309,7 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                         <img
                           alt={t(`artworkStudio.style.${item}`)}
                           className={styles.galleryThumb}
-                          src={imageUrl(`agent-artwork-styles/style-${item}.jpg`)}
+                          src={imageUrl(`agent-artwork-styles/style-${item}.webp`)}
                         />
                         {style === item ? (
                           <Center className={styles.galleryCheck}>
