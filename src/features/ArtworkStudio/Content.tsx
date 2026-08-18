@@ -30,19 +30,25 @@ const LOBE_STYLE_PREVIEW =
   DEFAULT_CHIEF_AGENT_ARTWORK.avatar;
 
 /** Both slots share this height so the two cards read as one row. */
-const PREVIEW_HEIGHT = 200;
+const PREVIEW_HEIGHT = 280;
 /** Keeps the avatar's inset inside its slot proportional to the slot itself. */
-const AVATAR_SIZE = PREVIEW_HEIGHT - 32;
+const AVATAR_SIZE = PREVIEW_HEIGHT - 40;
+/**
+ * The style gallery is a picker, not content. At full-bleed thumbnail size its
+ * five saturated images outweighed the artwork the modal is actually about, so
+ * it is sized as a control strip.
+ */
+const STYLE_THUMB_SIZE = 64;
 
 const styles = createStaticStyles(({ css }) => ({
   galleryCheck: css`
     position: absolute;
     z-index: 1;
-    inset-block-start: 6px;
-    inset-inline-end: 6px;
+    inset-block-start: 4px;
+    inset-inline-end: 4px;
 
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
 
     color: ${cssVar.colorTextLightSolid};
@@ -50,15 +56,15 @@ const styles = createStaticStyles(({ css }) => ({
     background: ${cssVar.colorPrimary};
   `,
   galleryGrid: css`
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
     align-items: start;
   `,
   galleryItem: css`
     cursor: pointer;
 
-    width: 100%;
+    width: ${STYLE_THUMB_SIZE + 8}px;
     padding: 4px;
     border: 1px solid transparent;
     border-radius: ${cssVar.borderRadiusLG};
@@ -76,21 +82,14 @@ const styles = createStaticStyles(({ css }) => ({
     background: ${cssVar.colorFillTertiary};
   `,
   galleryLabel: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    height: 36px;
-
     font-size: 12px;
-    line-height: 18px;
+    line-height: 16px;
     color: ${cssVar.colorTextSecondary};
     text-align: center;
   `,
   galleryThumb: css`
     aspect-ratio: 1;
-    width: 100%;
+    width: ${STYLE_THUMB_SIZE}px;
     border-radius: ${cssVar.borderRadiusLG};
 
     object-fit: cover;
@@ -137,7 +136,15 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   outputActions: css`
     width: 100%;
-    max-width: ${PREVIEW_HEIGHT}px;
+  `,
+  /** Each column is exactly as wide as its own preview, so nothing overhangs. */
+  outputColumnAvatar: css`
+    width: ${PREVIEW_HEIGHT}px;
+    max-width: 100%;
+  `,
+  outputColumnFullBody: css`
+    width: ${Math.round((PREVIEW_HEIGHT * 3) / 4)}px;
+    max-width: 100%;
   `,
   outputGrid: css`
     display: grid;
@@ -166,6 +173,11 @@ const styles = createStaticStyles(({ css }) => ({
     width: 100%;
     height: 100%;
     object-fit: contain;
+  `,
+  controlLabel: css`
+    font-size: 12px;
+    line-height: 16px;
+    color: ${cssVar.colorTextTertiary};
   `,
   sectionTitle: css`
     font-weight: 500;
@@ -264,7 +276,7 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
       ) : null;
 
     return (
-      <Flexbox gap={20} padding={24}>
+      <Flexbox gap={24} padding={24}>
         <div className={styles.outputGrid}>
           <Flexbox
             align={'center'}
@@ -284,32 +296,34 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
               <Icon icon={CircleUserRound} size={16} />
               <Text className={styles.sectionTitle}>{t('artworkStudio.composition.avatar')}</Text>
             </Flexbox>
-            <Center className={`${styles.outputPreview} ${styles.outputPreviewAvatar}`}>
-              <Avatar
-                avatar={avatar || undefined}
-                key={avatarRemountKey(avatar)}
-                shape={'square'}
-                size={AVATAR_SIZE}
-              />
-              {renderGenerationOverlay('avatar')}
-            </Center>
-            <Flexbox horizontal className={styles.outputActions} gap={8}>
-              <Button icon={UploadIcon} loading={uploading} size={'small'} style={{ flex: 1 }}>
-                {t('artworkStudio.upload')}
-              </Button>
-              <Button
-                icon={WandSparkles}
-                size={'small'}
-                style={{ flex: 1 }}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onGenerate(style, 'avatar');
-                }}
-              >
-                {t('artworkStudio.generate.avatar')}
-              </Button>
+            <Flexbox align={'center'} className={styles.outputColumnAvatar} gap={10}>
+              <Center className={`${styles.outputPreview} ${styles.outputPreviewAvatar}`}>
+                <Avatar
+                  avatar={avatar || undefined}
+                  key={avatarRemountKey(avatar)}
+                  shape={'square'}
+                  size={AVATAR_SIZE}
+                />
+                {renderGenerationOverlay('avatar')}
+              </Center>
+              <Flexbox horizontal className={styles.outputActions} gap={8}>
+                <Button icon={UploadIcon} loading={uploading} size={'small'} style={{ flex: 1 }}>
+                  {t('artworkStudio.upload')}
+                </Button>
+                <Button
+                  icon={WandSparkles}
+                  size={'small'}
+                  style={{ flex: 1 }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onGenerate(style, 'avatar');
+                  }}
+                >
+                  {t('artworkStudio.generate.avatar')}
+                </Button>
+              </Flexbox>
+              <Text className={styles.uploadSpec}>{t('artworkStudio.uploadSpec.avatar')}</Text>
             </Flexbox>
-            <Text className={styles.uploadSpec}>{t('artworkStudio.uploadSpec.avatar')}</Text>
           </Flexbox>
           <Flexbox
             align={'center'}
@@ -329,35 +343,37 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
               <Icon icon={PersonStanding} size={16} />
               <Text className={styles.sectionTitle}>{t('artworkStudio.composition.fullBody')}</Text>
             </Flexbox>
-            <Center className={`${styles.outputPreview} ${styles.outputPreviewFullBody}`}>
-              {fullBody ? (
-                <img
-                  alt={t('artworkStudio.preview.fullBody')}
-                  className={styles.previewBodyImage}
-                  src={fullBody}
-                />
-              ) : (
-                <Icon icon={PersonStanding} size={64} />
-              )}
-              {renderGenerationOverlay('fullBody')}
-            </Center>
-            <Flexbox horizontal className={styles.outputActions} gap={8}>
-              <Button icon={UploadIcon} loading={uploading} size={'small'} style={{ flex: 1 }}>
-                {t('artworkStudio.upload')}
-              </Button>
-              <Button
-                icon={WandSparkles}
-                size={'small'}
-                style={{ flex: 1 }}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onGenerate(style, 'fullBody');
-                }}
-              >
-                {t('artworkStudio.generate.fullBody')}
-              </Button>
+            <Flexbox align={'center'} className={styles.outputColumnFullBody} gap={10}>
+              <Center className={`${styles.outputPreview} ${styles.outputPreviewFullBody}`}>
+                {fullBody ? (
+                  <img
+                    alt={t('artworkStudio.preview.fullBody')}
+                    className={styles.previewBodyImage}
+                    src={fullBody}
+                  />
+                ) : (
+                  <Icon icon={PersonStanding} size={64} />
+                )}
+                {renderGenerationOverlay('fullBody')}
+              </Center>
+              <Flexbox horizontal className={styles.outputActions} gap={8}>
+                <Button icon={UploadIcon} loading={uploading} size={'small'} style={{ flex: 1 }}>
+                  {t('artworkStudio.upload')}
+                </Button>
+                <Button
+                  icon={WandSparkles}
+                  size={'small'}
+                  style={{ flex: 1 }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onGenerate(style, 'fullBody');
+                  }}
+                >
+                  {t('artworkStudio.generate.fullBody')}
+                </Button>
+              </Flexbox>
+              <Text className={styles.uploadSpec}>{t('artworkStudio.uploadSpec.fullBody')}</Text>
             </Flexbox>
-            <Text className={styles.uploadSpec}>{t('artworkStudio.uploadSpec.fullBody')}</Text>
           </Flexbox>
         </div>
 
@@ -369,8 +385,8 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
 
         {canGenerate ? (
           <>
-            <Flexbox gap={8}>
-              <Text className={styles.sectionTitle}>{t('artworkStudio.style.title')}</Text>
+            <Flexbox gap={10}>
+              <Text className={styles.controlLabel}>{t('artworkStudio.style.title')}</Text>
               <div className={styles.galleryGrid}>
                 {GALLERY_STYLES.map((item) => (
                   <Flexbox
