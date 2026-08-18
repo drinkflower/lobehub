@@ -1,7 +1,7 @@
 'use client';
 
 import { imageUrl } from '@lobechat/const';
-import type { AgentArtworkStyle } from '@lobechat/prompts';
+import type { AgentArtworkComposition, AgentArtworkStyle } from '@lobechat/prompts';
 import { AGENT_ARTWORK_STYLES } from '@lobechat/prompts';
 import { Alert, Avatar, Center, Flexbox, Icon, Text } from '@lobehub/ui';
 import { Button, useModalContext } from '@lobehub/ui/base-ui';
@@ -19,12 +19,15 @@ import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { avatarRemountKey, openFilePicker } from '@/features/AgentProfileArtwork/utils';
-import { DEFAULT_CHIEF_AGENT_ARTWORK } from '@/features/ChiefAgent/artwork';
+import { CHIEF_AGENT_ARTWORKS, DEFAULT_CHIEF_AGENT_ARTWORK } from '@/features/ChiefAgent/artwork';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useAiInfraStore } from '@/store/aiInfra';
 import { aiProviderSelectors } from '@/store/aiInfra/selectors';
 
 const GALLERY_STYLES = AGENT_ARTWORK_STYLES;
+const LOBE_STYLE_PREVIEW =
+  CHIEF_AGENT_ARTWORKS.find((item) => item.id === 'sienna')?.avatar ??
+  DEFAULT_CHIEF_AGENT_ARTWORK.avatar;
 
 const styles = createStaticStyles(({ css }) => ({
   galleryCheck: css`
@@ -127,6 +130,9 @@ const styles = createStaticStyles(({ css }) => ({
       border-color: ${cssVar.colorBorder};
     }
   `,
+  outputActions: css`
+    width: 100%;
+  `,
   outputGrid: css`
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -182,13 +188,14 @@ export interface ArtworkStudioContentProps {
   /** Copy under the "generate with AI" heading. */
   generateHint: string;
   generating?: boolean;
+  generatingTarget?: AgentArtworkComposition | 'both';
   /** Headline shown over the preview while a generation runs. */
   generatingTitle: string;
   /** True when the last generation attempt failed and can be retried. */
   generationFailed?: boolean;
   onCancel: () => void;
-  onGenerate: (style: AgentArtworkStyle) => void;
-  onUpload: (file: File) => void;
+  onGenerate: (style: AgentArtworkStyle, composition?: AgentArtworkComposition) => void;
+  onUpload: (file: File, composition: AgentArtworkComposition) => void;
   uploading?: boolean;
 }
 
@@ -205,6 +212,7 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
     generateHint,
     generatingTitle,
     generating,
+    generatingTarget,
     generationFailed,
     onCancel,
     onGenerate,
@@ -218,7 +226,8 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
       (state) => aiProviderSelectors.enabledImageModelList(state).length > 0,
     );
 
-    const uploadInputRef = useRef<HTMLInputElement>(null);
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+    const fullBodyInputRef = useRef<HTMLInputElement>(null);
     const [style, setStyle] = useState<AgentArtworkStyle>('anime');
     const selectStyle = useCallback((next: AgentArtworkStyle) => setStyle(next), []);
 
@@ -232,22 +241,28 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
       [],
     );
 
-    const generationOverlay = generating ? (
-      <Center className={styles.generationOverlay}>
-        <Flexbox align={'center'} gap={10}>
-          <NeuralNetworkLoading size={32} />
-          <Flexbox align={'center'} gap={4}>
-            <Text className={styles.sectionTitle}>{generatingTitle}</Text>
-            <Text className={styles.hint} style={{ textAlign: 'center' }}>
-              {t('artworkStudio.generatingHint')}
-            </Text>
-            <Button size={'small'} style={{ marginBlockStart: 4 }} type={'fill'} onClick={onCancel}>
-              {t('artworkStudio.cancel')}
-            </Button>
+    const renderGenerationOverlay = (composition: AgentArtworkComposition) =>
+      generating && (generatingTarget === composition || generatingTarget === 'both') ? (
+        <Center className={styles.generationOverlay}>
+          <Flexbox align={'center'} gap={10}>
+            <NeuralNetworkLoading size={32} />
+            <Flexbox align={'center'} gap={4}>
+              <Text className={styles.sectionTitle}>{generatingTitle}</Text>
+              <Text className={styles.hint} style={{ textAlign: 'center' }}>
+                {t('artworkStudio.generatingHint')}
+              </Text>
+              <Button
+                size={'small'}
+                style={{ marginBlockStart: 4 }}
+                type={'fill'}
+                onClick={onCancel}
+              >
+                {t('artworkStudio.cancel')}
+              </Button>
+            </Flexbox>
           </Flexbox>
-        </Flexbox>
-      </Center>
-    ) : null;
+        </Center>
+      ) : null;
 
     return (
       <Flexbox gap={20} padding={24}>
@@ -256,16 +271,6 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
             <Text className={styles.sectionTitle}>{t('artworkStudio.generateTitle')}</Text>
             <Text className={styles.hint}>{generateHint}</Text>
           </Flexbox>
-          <Button
-            icon={UploadIcon}
-            loading={uploading}
-            onClick={() => {
-              const input = uploadInputRef.current;
-              if (input) openFilePicker(input);
-            }}
-          >
-            {t('artworkStudio.upload')}
-          </Button>
         </Flexbox>
 
         <Flexbox gap={8}>
@@ -274,7 +279,20 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
             <Text className={styles.hint}>{t('artworkStudio.composition.hint')}</Text>
           </Flexbox>
           <div className={styles.outputGrid}>
-            <Flexbox align={'center'} className={styles.outputCard} gap={10}>
+            <Flexbox
+              align={'center'}
+              className={styles.outputCard}
+              gap={10}
+              role={'button'}
+              tabIndex={0}
+              onClick={() => avatarInputRef.current && openFilePicker(avatarInputRef.current)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  if (avatarInputRef.current) openFilePicker(avatarInputRef.current);
+                }
+              }}
+            >
               <Flexbox horizontal align={'center'} gap={6}>
                 <Icon icon={CircleUserRound} size={16} />
                 <Text className={styles.sectionTitle}>{t('artworkStudio.composition.avatar')}</Text>
@@ -286,10 +304,39 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                   shape={'square'}
                   size={148}
                 />
-                {generationOverlay}
+                {renderGenerationOverlay('avatar')}
               </Center>
+              <Flexbox horizontal className={styles.outputActions} gap={8}>
+                <Button icon={UploadIcon} loading={uploading} size={'small'} style={{ flex: 1 }}>
+                  {t('artworkStudio.upload')}
+                </Button>
+                <Button
+                  icon={WandSparkles}
+                  size={'small'}
+                  style={{ flex: 1 }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onGenerate(style, 'avatar');
+                  }}
+                >
+                  {t('artworkStudio.generate.avatar')}
+                </Button>
+              </Flexbox>
             </Flexbox>
-            <Flexbox align={'center'} className={styles.outputCard} gap={10}>
+            <Flexbox
+              align={'center'}
+              className={styles.outputCard}
+              gap={10}
+              role={'button'}
+              tabIndex={0}
+              onClick={() => fullBodyInputRef.current && openFilePicker(fullBodyInputRef.current)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  if (fullBodyInputRef.current) openFilePicker(fullBodyInputRef.current);
+                }
+              }}
+            >
               <Flexbox horizontal align={'center'} gap={6}>
                 <Icon icon={PersonStanding} size={16} />
                 <Text className={styles.sectionTitle}>
@@ -306,8 +353,24 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                 ) : (
                   <Icon icon={PersonStanding} size={64} />
                 )}
-                {generationOverlay}
+                {renderGenerationOverlay('fullBody')}
               </Center>
+              <Flexbox horizontal className={styles.outputActions} gap={8}>
+                <Button icon={UploadIcon} loading={uploading} size={'small'} style={{ flex: 1 }}>
+                  {t('artworkStudio.upload')}
+                </Button>
+                <Button
+                  icon={WandSparkles}
+                  size={'small'}
+                  style={{ flex: 1 }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onGenerate(style, 'fullBody');
+                  }}
+                >
+                  {t('artworkStudio.generate.fullBody')}
+                </Button>
+              </Flexbox>
             </Flexbox>
           </div>
           <Text className={styles.hint}>{diyHint}</Text>
@@ -334,7 +397,7 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                         className={styles.galleryThumb}
                         src={
                           item === 'lobe'
-                            ? DEFAULT_CHIEF_AGENT_ARTWORK.avatar
+                            ? LOBE_STYLE_PREVIEW
                             : imageUrl(`agent-artwork-styles/style-${item}.webp`)
                         }
                       />
@@ -388,13 +451,26 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
           accept="image/*"
           aria-label={t('artworkStudio.upload')}
           className={styles.visuallyHiddenInput}
-          ref={uploadInputRef}
+          ref={avatarInputRef}
           tabIndex={-1}
           type="file"
           onChange={(event) => {
             const file = event.target.files?.[0];
             event.target.value = '';
-            if (file) onUpload(file);
+            if (file) onUpload(file, 'avatar');
+          }}
+        />
+        <input
+          accept="image/*"
+          aria-label={t('artworkStudio.upload')}
+          className={styles.visuallyHiddenInput}
+          ref={fullBodyInputRef}
+          tabIndex={-1}
+          type="file"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            if (file) onUpload(file, 'fullBody');
           }}
         />
       </Flexbox>

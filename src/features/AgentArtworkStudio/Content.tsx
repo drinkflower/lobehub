@@ -1,6 +1,6 @@
 'use client';
 
-import type { AgentArtworkStyle } from '@lobechat/prompts';
+import type { AgentArtworkComposition, AgentArtworkStyle } from '@lobechat/prompts';
 import { toast } from '@lobehub/ui/base-ui';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -34,12 +34,13 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
 
   const [uploading, setUploading] = useState(false);
   const [fullBody, setFullBody] = useState<string>();
+  const [generatingTarget, setGeneratingTarget] = useState<AgentArtworkComposition | 'both'>();
 
   const generating = generation?.status === 'generating' && generation.kind === 'avatar';
   const generationFailed = generation?.status === 'error' && generation.kind === 'avatar';
 
   const generate = useCallback(
-    async (nextStyle: AgentArtworkStyle) => {
+    async (nextStyle: AgentArtworkStyle, composition?: AgentArtworkComposition) => {
       const commonInput = {
         description: meta.description,
         id: agentId,
@@ -52,16 +53,23 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
         title: meta.title,
       } as const;
 
+      setGeneratingTarget(composition ?? 'both');
       try {
-        const fullBodyUrl = await generateAgentArtwork({
-          ...commonInput,
-          composition: 'fullBody',
-          persist: false,
-        });
-        if (fullBodyUrl) setFullBody(fullBodyUrl);
-        await generateAgentArtwork({ ...commonInput, composition: 'avatar' });
+        if (!composition || composition === 'fullBody') {
+          const fullBodyUrl = await generateAgentArtwork({
+            ...commonInput,
+            composition: 'fullBody',
+            persist: false,
+          });
+          if (fullBodyUrl) setFullBody(fullBodyUrl);
+        }
+        if (!composition || composition === 'avatar') {
+          await generateAgentArtwork({ ...commonInput, composition: 'avatar' });
+        }
       } catch {
         // The Agent store owns the persistent error state rendered below.
+      } finally {
+        setGeneratingTarget(undefined);
       }
     },
     [
@@ -77,7 +85,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
   );
 
   const upload = useCallback(
-    async (file: File) => {
+    async (file: File, composition: AgentArtworkComposition) => {
       if (file.size > MAX_AVATAR_SIZE) {
         toast.error(t('settingAgent.artwork.sizeExceeded'));
         return;
@@ -87,7 +95,8 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
       try {
         const result = await uploadWithProgress({ file });
         if (!result?.url) throw new Error('Upload returned no URL');
-        await updateAgentMetaById(agentId, { avatar: result.url });
+        if (composition === 'avatar') await updateAgentMetaById(agentId, { avatar: result.url });
+        else setFullBody(result.url);
       } catch (error) {
         console.error('Failed to upload agent avatar:', error);
         toast.error(t('settingAgent.artwork.uploadFailed'));
@@ -105,12 +114,13 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
       fullBody={fullBody || DEFAULT_CHIEF_AGENT_ARTWORK.hero}
       generateHint={t('settingAgent.artwork.studio.generateHint')}
       generating={generating}
+      generatingTarget={generatingTarget}
       generatingTitle={t('settingAgent.artwork.avatar.generating')}
       generationFailed={generationFailed}
       uploading={uploading}
       onCancel={() => void cancelAgentArtworkGeneration(agentId)}
       onGenerate={generate}
-      onUpload={(file) => void upload(file)}
+      onUpload={(file, composition) => void upload(file, composition)}
     />
   );
 });
