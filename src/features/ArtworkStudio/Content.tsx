@@ -49,7 +49,7 @@ const AVATAR_SIZE = PREVIEW_HEIGHT - 40;
  * it is sized as a control strip.
  */
 const STYLE_THUMB_SIZE = 64;
-const STYLE_SECTION_KEY = 'style';
+const GENERATE_SECTION_KEY = 'generate';
 
 const styles = createStaticStyles(({ css }) => ({
   galleryCheck: css`
@@ -263,7 +263,7 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
     const fullBodyInputRef = useRef<HTMLInputElement>(null);
     const [style, setStyle] = useState<AgentArtworkStyle>('anime');
     const [direction, setDirection] = useState('');
-    const [styleExpanded, setStyleExpanded] = useState(true);
+    const [generateExpanded, setGenerateExpanded] = useState(true);
     const selectStyle = useCallback((next: AgentArtworkStyle) => setStyle(next), []);
 
     const keySelect = useCallback(
@@ -403,75 +403,74 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
         {canGenerate ? (
           <>
             <Accordion
-              expandedKeys={styleExpanded ? [STYLE_SECTION_KEY] : []}
+              expandedKeys={generateExpanded ? [GENERATE_SECTION_KEY] : []}
               gap={4}
-              onExpandedChange={(keys) => setStyleExpanded(keys.length > 0)}
+              onExpandedChange={(keys) => setGenerateExpanded(keys.length > 0)}
             >
               <AccordionItem
-                itemKey={STYLE_SECTION_KEY}
+                itemKey={GENERATE_SECTION_KEY}
                 paddingBlock={2}
                 paddingInline={0}
                 title={
-                  <Text className={styles.controlLabel}>{t('artworkStudio.style.title')}</Text>
+                  <Text className={styles.controlLabel}>{t('artworkStudio.generateTitle')}</Text>
                 }
               >
-                <div className={styles.galleryGrid}>
-                  {GALLERY_STYLES.map((item) => (
-                    <Flexbox
-                      className={`${styles.galleryItem} ${style === item ? styles.galleryItemActive : ''}`}
-                      gap={6}
-                      key={item}
-                      role={'button'}
-                      tabIndex={0}
-                      onClick={() => selectStyle(item)}
-                      onKeyDown={keySelect(item)}
+                <Flexbox gap={12} paddingBlock={'4px 0'}>
+                  <div className={styles.galleryGrid}>
+                    {GALLERY_STYLES.map((item) => (
+                      <Flexbox
+                        className={`${styles.galleryItem} ${style === item ? styles.galleryItemActive : ''}`}
+                        gap={6}
+                        key={item}
+                        role={'button'}
+                        tabIndex={0}
+                        onClick={() => selectStyle(item)}
+                        onKeyDown={keySelect(item)}
+                      >
+                        <div className={styles.galleryThumbWrap}>
+                          <img
+                            alt={t(`artworkStudio.style.${item}`)}
+                            className={styles.galleryThumb}
+                            src={
+                              item === 'lobe'
+                                ? LOBE_STYLE_PREVIEW
+                                : imageUrl(`agent-artwork-styles/style-${item}.webp`)
+                            }
+                          />
+                          {style === item ? (
+                            <Center className={styles.galleryCheck}>
+                              <Icon icon={Check} size={13} />
+                            </Center>
+                          ) : null}
+                        </div>
+                        <Text ellipsis className={styles.galleryLabel}>
+                          {t(`artworkStudio.style.${item}`)}
+                        </Text>
+                      </Flexbox>
+                    ))}
+                  </div>
+                  <Input
+                    disabled={generating}
+                    placeholder={t('artworkStudio.direction.placeholder')}
+                    value={direction}
+                    onChange={(event) => setDirection(event.target.value)}
+                  />
+                  <Flexbox horizontal>
+                    <Button
+                      disabled={generating}
+                      icon={WandSparkles}
+                      type={'fill'}
+                      onClick={() => onGenerate(style, undefined, direction)}
                     >
-                      <div className={styles.galleryThumbWrap}>
-                        <img
-                          alt={t(`artworkStudio.style.${item}`)}
-                          className={styles.galleryThumb}
-                          src={
-                            item === 'lobe'
-                              ? LOBE_STYLE_PREVIEW
-                              : imageUrl(`agent-artwork-styles/style-${item}.webp`)
-                          }
-                        />
-                        {style === item ? (
-                          <Center className={styles.galleryCheck}>
-                            <Icon icon={Check} size={13} />
-                          </Center>
-                        ) : null}
-                      </div>
-                      <Text ellipsis className={styles.galleryLabel}>
-                        {t(`artworkStudio.style.${item}`)}
-                      </Text>
-                    </Flexbox>
-                  ))}
-                </div>
+                      {t('artworkStudio.generate.characterSet')}
+                    </Button>
+                  </Flexbox>
+                  {generationFailed ? (
+                    <Alert showIcon title={t('artworkStudio.generateFailed')} type={'error'} />
+                  ) : null}
+                </Flexbox>
               </AccordionItem>
             </Accordion>
-
-            <Flexbox gap={10}>
-              <Input
-                disabled={generating}
-                placeholder={t('artworkStudio.direction.placeholder')}
-                value={direction}
-                onChange={(event) => setDirection(event.target.value)}
-              />
-              <Flexbox horizontal>
-                <Button
-                  disabled={generating}
-                  icon={WandSparkles}
-                  type={'fill'}
-                  onClick={() => onGenerate(style, undefined, direction)}
-                >
-                  {t('artworkStudio.generate.characterSet')}
-                </Button>
-              </Flexbox>
-              {generationFailed ? (
-                <Alert showIcon title={t('artworkStudio.generateFailed')} type={'error'} />
-              ) : null}
-            </Flexbox>
           </>
         ) : (
           <Center className={styles.noModelBlock} flex={1} gap={12} padding={24}>
