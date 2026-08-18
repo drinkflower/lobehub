@@ -111,9 +111,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
   return (
     <ArtworkStudioContent
       avatar={meta.avatar}
-      diyHint={t('settingAgent.artwork.studio.diyHint')}
       fullBody={fullBody || DEFAULT_CHIEF_AGENT_ARTWORK.hero}
-      generateHint={t('settingAgent.artwork.studio.generateHint')}
       generating={generating}
       generatingTarget={generatingTarget}
       generatingTitle={t('settingAgent.artwork.avatar.generating')}

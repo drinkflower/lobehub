@@ -141,6 +141,9 @@ describe('buildAgentArtworkPrompt', () => {
 
     expect(prompt).toContain('complete head-to-toe character image');
     expect(prompt).toContain('entire body clearly');
+    expect(prompt).toContain('distinctive portrait character image');
+    expect(prompt).toContain('entire portrait canvas');
+    expect(prompt).not.toContain('distinctive square character image');
     expect(prompt).not.toContain('head fills most of the frame');
   });
 

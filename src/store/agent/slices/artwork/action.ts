@@ -71,6 +71,7 @@ export class AgentArtworkActionImpl {
     try {
       const url = await generateArtworkImage({
         buildPrompt: (references) => buildAgentArtworkPrompt({ ...input, ...references }),
+        composition: input.composition,
         kind: input.kind,
         onGenerationCreated: (generationId) => {
           job.generationId = generationId;

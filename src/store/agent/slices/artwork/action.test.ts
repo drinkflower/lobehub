@@ -88,6 +88,25 @@ describe('AgentArtworkAction', () => {
   });
 
   it('returns companion artwork without replacing persisted agent metadata', async () => {
+    vi.mocked(getAiInfraStoreState).mockReturnValue({
+      enabledImageModelList: [
+        {
+          children: [
+            {
+              abilities: {},
+              id: 'gemini-3.1-flash-lite-image:image',
+              parameters: {
+                aspectRatio: { default: 'auto', enum: ['auto', '1:1', '3:4'] },
+                prompt: { default: '' },
+              },
+            },
+          ],
+          id: 'google',
+          name: 'Google',
+          source: 'builtin',
+        },
+      ],
+    } as unknown as ReturnType<typeof getAiInfraStoreState>);
     vi.mocked(generationTopicService.createTopic).mockResolvedValue('topic-1');
     vi.mocked(imageService.createImage).mockResolvedValue({
       data: { generations: [{ asyncTaskId: 'task-1', id: 'generation-1' }] },
@@ -107,6 +126,14 @@ describe('AgentArtworkAction', () => {
     });
 
     expect(url).toBe('https://example.com/full-body.webp');
+    expect(imageService.createImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: expect.objectContaining({
+          aspectRatio: '3:4',
+          prompt: expect.stringContaining('distinctive portrait character image'),
+        }),
+      }),
+    );
     expect(updateAgentMetaById).not.toHaveBeenCalled();
   });
 

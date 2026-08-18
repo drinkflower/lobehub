@@ -119,7 +119,7 @@ const styles = createStaticStyles(({ css }) => ({
     padding-inline: 8px;
   `,
   outputActions: css`
-    width: 100%;
+    width: 176px;
   `,
   outputGrid: css`
     display: grid;
@@ -142,7 +142,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   outputPreviewFullBody: css`
     aspect-ratio: 3 / 4;
-    height: 176px;
+    width: 176px;
   `,
   previewBodyImage: css`
     width: 100%;
@@ -169,12 +169,8 @@ const styles = createStaticStyles(({ css }) => ({
 export interface ArtworkStudioContentProps {
   /** Current avatar url; falsy renders the empty avatar placeholder. */
   avatar?: string | null;
-  /** Copy under the "make your own" heading — names the subject being dressed. */
-  diyHint: string;
   /** Current or freshly generated full-body artwork. */
   fullBody?: string | null;
-  /** Copy under the "generate with AI" heading. */
-  generateHint: string;
   generating?: boolean;
   generatingTarget?: AgentArtworkComposition | 'both';
   /** Headline shown over the preview while a generation runs. */
@@ -196,8 +192,6 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
   ({
     avatar,
     fullBody,
-    diyHint,
-    generateHint,
     generatingTitle,
     generating,
     generatingTarget,
@@ -254,13 +248,6 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
 
     return (
       <Flexbox gap={20} padding={24}>
-        <Flexbox horizontal align={'flex-start'} justify={'space-between'}>
-          <Flexbox gap={4}>
-            <Text className={styles.sectionTitle}>{t('artworkStudio.generateTitle')}</Text>
-            <Text className={styles.hint}>{generateHint}</Text>
-          </Flexbox>
-        </Flexbox>
-
         <Flexbox gap={8}>
           <Flexbox gap={2}>
             <Text className={styles.sectionTitle}>{t('artworkStudio.composition.title')}</Text>
@@ -361,7 +348,6 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
               </Flexbox>
             </Flexbox>
           </div>
-          <Text className={styles.hint}>{diyHint}</Text>
         </Flexbox>
 
         {canGenerate ? (

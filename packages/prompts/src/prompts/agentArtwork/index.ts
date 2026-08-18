@@ -47,7 +47,7 @@ const BACKGROUND_STYLE_OVERRIDES: Partial<Record<AgentArtworkStyle, string>> = {
 const MOTIF_DIRECTION = `Ground the imagery in the agent's specific domain and personality. Avoid generic AI and technology clichés — starry space scenes, glowing particles, circuit boards, neural-network lines, holographic grids — unless the agent's subject matter is explicitly about them.`;
 
 const AVATAR_CANVAS_DIRECTION = `Fill the entire square canvas edge to edge with the artwork: use a full-bleed composition with no white background, no white matte, no empty margin, no padding, no frame, and no border. No words, no letters, and no logo. The result must remain clear as a small app avatar.`;
-const FULL_BODY_CANVAS_DIRECTION = `Use the entire square canvas for a clean character presentation with a simple background, no frame, no border, no words, no letters, and no logo.`;
+const FULL_BODY_CANVAS_DIRECTION = `Use the entire portrait canvas for a clean character presentation with a simple background, no frame, no border, no words, no letters, and no logo.`;
 
 const AVATAR_COMPOSITION_DIRECTION = `Compose a close-up avatar: the head fills most of the frame, with at most a little of the upper body visible.`;
 const FULL_BODY_COMPOSITION_DIRECTION = `Compose a complete head-to-toe character image: show the entire body clearly, centered in a natural standing or action pose, with comfortable breathing room around the silhouette. Keep the face expressive and readable.`;
@@ -162,7 +162,9 @@ export const buildAgentArtworkPrompt = (input: AgentArtworkPromptInput): string 
     const canvasDirection =
       composition === 'fullBody' ? FULL_BODY_CANVAS_DIRECTION : AVATAR_CANVAS_DIRECTION;
 
-    return `Create a distinctive square character image for the AI agent described below.
+    const canvasShape = composition === 'fullBody' ? 'portrait' : 'square';
+
+    return `Create a distinctive ${canvasShape} character image for the AI agent described below.
 
 ${agentContext}
 
