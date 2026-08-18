@@ -4,7 +4,7 @@ import { imageUrl } from '@lobechat/const';
 import type { AgentArtworkComposition, AgentArtworkStyle } from '@lobechat/prompts';
 import { AGENT_ARTWORK_STYLES } from '@lobechat/prompts';
 import { Alert, Avatar, Center, Flexbox, Icon, Text } from '@lobehub/ui';
-import { Button, Segmented, useModalContext } from '@lobehub/ui/base-ui';
+import { Button, useModalContext } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
   Check,
@@ -22,8 +22,6 @@ import { avatarRemountKey, openFilePicker } from '@/features/AgentProfileArtwork
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useAiInfraStore } from '@/store/aiInfra';
 import { aiProviderSelectors } from '@/store/aiInfra/selectors';
-
-import { LOBE_STYLE_REFERENCE_IMAGE_URLS } from './styleReferences';
 
 const GALLERY_STYLES = AGENT_ARTWORK_STYLES;
 
@@ -44,14 +42,14 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   galleryGrid: css`
     display: grid;
-
-    /* One row of five, per review: the set is curated to exactly five styles. */
     grid-template-columns: repeat(5, 1fr);
     gap: 8px;
+    align-items: start;
   `,
   galleryItem: css`
     cursor: pointer;
 
+    width: 100%;
     padding: 4px;
     border: 1px solid transparent;
     border-radius: ${cssVar.borderRadiusLG};
@@ -69,7 +67,15 @@ const styles = createStaticStyles(({ css }) => ({
     background: ${cssVar.colorFillTertiary};
   `,
   galleryLabel: css`
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+
+    height: 36px;
+
     font-size: 12px;
+    line-height: 18px;
     color: ${cssVar.colorTextSecondary};
     text-align: center;
   `,
@@ -99,23 +105,53 @@ const styles = createStaticStyles(({ css }) => ({
     font-size: 13px;
     color: ${cssVar.colorTextSecondary};
   `,
-  modeControl: css`
-    width: 100%;
-  `,
   noModelBlock: css`
     border-radius: ${cssVar.borderRadiusLG};
     background: ${cssVar.colorFillQuaternary};
   `,
-  preview: css`
-    position: relative;
+  outputCard: css`
+    cursor: pointer;
 
-    overflow: hidden;
-    flex: none;
-
+    padding: 14px;
     border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: ${cssVar.borderRadiusLG};
 
     background: ${cssVar.colorFillQuaternary};
+
+    transition:
+      border-color ${cssVar.motionDurationFast},
+      background ${cssVar.motionDurationFast};
+
+    &:hover {
+      border-color: ${cssVar.colorBorder};
+    }
+  `,
+  outputCardActive: css`
+    border-color: ${cssVar.colorPrimary};
+    background: ${cssVar.colorFillTertiary};
+  `,
+  outputGrid: css`
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  `,
+  outputPreview: css`
+    position: relative;
+
+    overflow: hidden;
+
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-radius: ${cssVar.borderRadiusLG};
+
+    background: ${cssVar.colorBgContainer};
+  `,
+  outputPreviewAvatar: css`
+    aspect-ratio: 1;
+    width: 176px;
+  `,
+  outputPreviewFullBody: css`
+    aspect-ratio: 3 / 4;
+    height: 176px;
   `,
   previewBodyImage: css`
     width: 100%;
@@ -158,10 +194,9 @@ export interface ArtworkStudioContentProps {
 }
 
 /**
- * Avatar workshop shared by every subject that can own one (Agents, workspaces):
- * make your own on the left, one-click generation in a preset style on the
- * right. Purely presentational — the caller owns the avatar value, the
- * generation lifecycle, and where the result is persisted.
+ * Artwork workshop shared by every subject that can own one (Agents, workspaces).
+ * The same underlying image is shown in its two product crops so users can
+ * choose the intended generation composition without hiding either result.
  */
 const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
   ({
@@ -199,181 +234,187 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
       [],
     );
 
-    return (
-      <Flexbox horizontal gap={32} padding={24} wrap={'wrap'}>
-        {/* DIY path: the live avatar plus upload. The preview doubles as the
-            generation stage so both paths land on the same picture. */}
-        <Flexbox gap={16} style={{ flex: 'none', width: 232 }}>
-          <Center
-            className={styles.preview}
-            height={composition === 'fullBody' ? 300 : 232}
-            width={232}
-          >
-            {/* Keyed by the url: Avatar latches an internal `isImgError` on the
-                first failed load and never clears it when `avatar` changes, so a
-                previously broken avatar would keep the freshly generated one
-                invisible until a reload. */}
-            {composition === 'fullBody' && avatar ? (
-              <img
-                alt={t('artworkStudio.preview.fullBody')}
-                className={styles.previewBodyImage}
-                src={avatar}
-              />
-            ) : (
-              <Avatar
-                avatar={avatar || undefined}
-                key={avatarRemountKey(avatar)}
-                shape={'square'}
-                size={180}
-              />
-            )}
-            {generating ? (
-              <Center className={styles.generationOverlay}>
-                <Flexbox align={'center'} gap={10}>
-                  <NeuralNetworkLoading size={32} />
-                  <Flexbox align={'center'} gap={4}>
-                    <Text className={styles.sectionTitle}>{generatingTitle}</Text>
-                    <Text className={styles.hint} style={{ textAlign: 'center' }}>
-                      {t('artworkStudio.generatingHint')}
-                    </Text>
-                    <Button
-                      size={'small'}
-                      style={{ marginBlockStart: 4 }}
-                      type={'fill'}
-                      onClick={onCancel}
-                    >
-                      {t('artworkStudio.cancel')}
-                    </Button>
-                  </Flexbox>
-                </Flexbox>
-              </Center>
-            ) : null}
-          </Center>
-          <Flexbox gap={8}>
-            <Text className={styles.sectionTitle}>{t('artworkStudio.diyTitle')}</Text>
-            <Text className={styles.hint}>{diyHint}</Text>
-            <Button
-              icon={UploadIcon}
-              loading={uploading}
-              onClick={() => {
-                const input = uploadInputRef.current;
-                if (input) openFilePicker(input);
-              }}
-            >
-              {t('artworkStudio.upload')}
+    const generationOverlay = generating ? (
+      <Center className={styles.generationOverlay}>
+        <Flexbox align={'center'} gap={10}>
+          <NeuralNetworkLoading size={32} />
+          <Flexbox align={'center'} gap={4}>
+            <Text className={styles.sectionTitle}>{generatingTitle}</Text>
+            <Text className={styles.hint} style={{ textAlign: 'center' }}>
+              {t('artworkStudio.generatingHint')}
+            </Text>
+            <Button size={'small'} style={{ marginBlockStart: 4 }} type={'fill'} onClick={onCancel}>
+              {t('artworkStudio.cancel')}
             </Button>
           </Flexbox>
         </Flexbox>
+      </Center>
+    ) : null;
 
-        {/* One-click path: choose composition first, then a peer-level style. */}
-        <Flexbox gap={16} style={{ flex: 1, minWidth: 280 }}>
+    return (
+      <Flexbox gap={20} padding={24}>
+        <Flexbox horizontal align={'flex-start'} justify={'space-between'}>
           <Flexbox gap={4}>
             <Text className={styles.sectionTitle}>{t('artworkStudio.generateTitle')}</Text>
             <Text className={styles.hint}>{generateHint}</Text>
           </Flexbox>
-
-          {canGenerate ? (
-            <>
-              <Flexbox gap={8}>
-                <Flexbox gap={2}>
-                  <Text className={styles.sectionTitle}>
-                    {t('artworkStudio.composition.title')}
-                  </Text>
-                  <Text className={styles.hint}>{t('artworkStudio.composition.hint')}</Text>
-                </Flexbox>
-                <Segmented<AgentArtworkComposition>
-                  block
-                  className={styles.modeControl}
-                  value={composition}
-                  options={[
-                    {
-                      icon: <Icon icon={CircleUserRound} size={16} />,
-                      label: t('artworkStudio.composition.avatar'),
-                      value: 'avatar',
-                    },
-                    {
-                      icon: <Icon icon={PersonStanding} size={16} />,
-                      label: t('artworkStudio.composition.fullBody'),
-                      value: 'fullBody',
-                    },
-                  ]}
-                  onChange={setComposition}
-                />
-              </Flexbox>
-
-              <Flexbox gap={8}>
-                <Text className={styles.sectionTitle}>{t('artworkStudio.style.title')}</Text>
-                <div className={styles.galleryGrid}>
-                  {GALLERY_STYLES.map((item) => (
-                    <Flexbox
-                      className={`${styles.galleryItem} ${style === item ? styles.galleryItemActive : ''}`}
-                      gap={6}
-                      key={item}
-                      role={'button'}
-                      tabIndex={0}
-                      onClick={() => selectStyle(item)}
-                      onKeyDown={keySelect(item)}
-                    >
-                      <div className={styles.galleryThumbWrap}>
-                        <img
-                          alt={t(`artworkStudio.style.${item}`)}
-                          className={styles.galleryThumb}
-                          src={
-                            item === 'lobe'
-                              ? LOBE_STYLE_REFERENCE_IMAGE_URLS[0]
-                              : imageUrl(`agent-artwork-styles/style-${item}.webp`)
-                          }
-                        />
-                        {style === item ? (
-                          <Center className={styles.galleryCheck}>
-                            <Icon icon={Check} size={13} />
-                          </Center>
-                        ) : null}
-                      </div>
-                      <Text ellipsis className={styles.galleryLabel}>
-                        {t(`artworkStudio.style.${item}`)}
-                      </Text>
-                    </Flexbox>
-                  ))}
-                </div>
-              </Flexbox>
-
-              <Flexbox gap={8} style={{ marginBlockStart: 'auto' }}>
-                <Button
-                  disabled={generating}
-                  icon={WandSparkles}
-                  type={'primary'}
-                  onClick={() => onGenerate(style, composition)}
-                >
-                  {t(
-                    composition === 'fullBody'
-                      ? 'artworkStudio.generate.fullBody'
-                      : 'artworkStudio.generate.avatar',
-                  )}
-                </Button>
-                {generationFailed ? (
-                  <Alert showIcon title={t('artworkStudio.generateFailed')} type={'error'} />
-                ) : null}
-              </Flexbox>
-            </>
-          ) : (
-            <Center className={styles.noModelBlock} flex={1} gap={12} padding={24}>
-              <Text className={styles.hint} style={{ textAlign: 'center' }}>
-                {t('artworkStudio.noModel')}
-              </Text>
-              <Button
-                icon={SettingsIcon}
-                type={'primary'}
-                onClick={() => {
-                  close();
-                  navigate('/settings/provider/all');
-                }}
-              >
-                {t('artworkStudio.enableModel')}
-              </Button>
-            </Center>
-          )}
+          <Button
+            icon={UploadIcon}
+            loading={uploading}
+            onClick={() => {
+              const input = uploadInputRef.current;
+              if (input) openFilePicker(input);
+            }}
+          >
+            {t('artworkStudio.upload')}
+          </Button>
         </Flexbox>
+
+        <Flexbox gap={8}>
+          <Flexbox gap={2}>
+            <Text className={styles.sectionTitle}>{t('artworkStudio.composition.title')}</Text>
+            <Text className={styles.hint}>{t('artworkStudio.composition.hint')}</Text>
+          </Flexbox>
+          <div className={styles.outputGrid}>
+            <Flexbox
+              align={'center'}
+              className={`${styles.outputCard} ${composition === 'avatar' ? styles.outputCardActive : ''}`}
+              gap={10}
+              role={'button'}
+              tabIndex={0}
+              onClick={() => setComposition('avatar')}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setComposition('avatar');
+                }
+              }}
+            >
+              <Flexbox horizontal align={'center'} gap={6}>
+                <Icon icon={CircleUserRound} size={16} />
+                <Text className={styles.sectionTitle}>{t('artworkStudio.composition.avatar')}</Text>
+              </Flexbox>
+              <Center className={`${styles.outputPreview} ${styles.outputPreviewAvatar}`}>
+                <Avatar
+                  avatar={avatar || undefined}
+                  key={avatarRemountKey(avatar)}
+                  shape={'square'}
+                  size={148}
+                />
+                {composition === 'avatar' ? generationOverlay : null}
+              </Center>
+            </Flexbox>
+            <Flexbox
+              align={'center'}
+              className={`${styles.outputCard} ${composition === 'fullBody' ? styles.outputCardActive : ''}`}
+              gap={10}
+              role={'button'}
+              tabIndex={0}
+              onClick={() => setComposition('fullBody')}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setComposition('fullBody');
+                }
+              }}
+            >
+              <Flexbox horizontal align={'center'} gap={6}>
+                <Icon icon={PersonStanding} size={16} />
+                <Text className={styles.sectionTitle}>
+                  {t('artworkStudio.composition.fullBody')}
+                </Text>
+              </Flexbox>
+              <Center className={`${styles.outputPreview} ${styles.outputPreviewFullBody}`}>
+                {avatar ? (
+                  <img
+                    alt={t('artworkStudio.preview.fullBody')}
+                    className={styles.previewBodyImage}
+                    src={avatar}
+                  />
+                ) : (
+                  <Icon icon={PersonStanding} size={64} />
+                )}
+                {composition === 'fullBody' ? generationOverlay : null}
+              </Center>
+            </Flexbox>
+          </div>
+          <Text className={styles.hint}>{diyHint}</Text>
+        </Flexbox>
+
+        {canGenerate ? (
+          <>
+            <Flexbox gap={8}>
+              <Text className={styles.sectionTitle}>{t('artworkStudio.style.title')}</Text>
+              <div className={styles.galleryGrid}>
+                {GALLERY_STYLES.map((item) => (
+                  <Flexbox
+                    className={`${styles.galleryItem} ${style === item ? styles.galleryItemActive : ''}`}
+                    gap={6}
+                    key={item}
+                    role={'button'}
+                    tabIndex={0}
+                    onClick={() => selectStyle(item)}
+                    onKeyDown={keySelect(item)}
+                  >
+                    <div className={styles.galleryThumbWrap}>
+                      <img
+                        alt={t(`artworkStudio.style.${item}`)}
+                        className={styles.galleryThumb}
+                        src={
+                          item === 'lobe'
+                            ? imageUrl('agent-artwork-styles/style-clay.jpg')
+                            : imageUrl(`agent-artwork-styles/style-${item}.webp`)
+                        }
+                      />
+                      {style === item ? (
+                        <Center className={styles.galleryCheck}>
+                          <Icon icon={Check} size={13} />
+                        </Center>
+                      ) : null}
+                    </div>
+                    <Text ellipsis className={styles.galleryLabel}>
+                      {t(`artworkStudio.style.${item}`)}
+                    </Text>
+                  </Flexbox>
+                ))}
+              </div>
+            </Flexbox>
+
+            <Flexbox gap={8}>
+              <Button
+                disabled={generating}
+                icon={WandSparkles}
+                type={'primary'}
+                onClick={() => onGenerate(style, composition)}
+              >
+                {t(
+                  composition === 'fullBody'
+                    ? 'artworkStudio.generate.fullBody'
+                    : 'artworkStudio.generate.avatar',
+                )}
+              </Button>
+              {generationFailed ? (
+                <Alert showIcon title={t('artworkStudio.generateFailed')} type={'error'} />
+              ) : null}
+            </Flexbox>
+          </>
+        ) : (
+          <Center className={styles.noModelBlock} flex={1} gap={12} padding={24}>
+            <Text className={styles.hint} style={{ textAlign: 'center' }}>
+              {t('artworkStudio.noModel')}
+            </Text>
+            <Button
+              icon={SettingsIcon}
+              type={'primary'}
+              onClick={() => {
+                close();
+                navigate('/settings/provider/all');
+              }}
+            >
+              {t('artworkStudio.enableModel')}
+            </Button>
+          </Center>
+        )}
 
         <input
           accept="image/*"
