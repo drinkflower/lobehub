@@ -1,5 +1,6 @@
 'use client';
 
+import { Accordion, AccordionItem } from '@lobehub/ui';
 import type { DropdownItem } from '@lobehub/ui/base-ui';
 import { DropdownMenu } from '@lobehub/ui/base-ui';
 import ActionIcon from '@lobehub/ui/es/ActionIcon/index';
@@ -8,7 +9,15 @@ import { Center, Flexbox } from '@lobehub/ui/es/Flex/index';
 import Icon from '@lobehub/ui/es/Icon/index';
 import Text from '@lobehub/ui/es/Text/index';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { ArrowLeft, Check, ListFilter, ScrollText, Search, TriangleAlert } from 'lucide-react';
+import {
+  ArrowLeft,
+  Check,
+  FolderClosed,
+  ListFilter,
+  ScrollText,
+  Search,
+  TriangleAlert,
+} from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
@@ -23,6 +32,8 @@ import {
   filterAcceptanceList,
   normalizeAcceptanceListFilter,
 } from '../Workspace/acceptanceListFilter';
+import AcceptanceProjectActions from '../Workspace/AcceptanceProjectActions';
+import { groupAcceptanceList, hasProjectAcceptanceGroups } from '../Workspace/groupAcceptanceList';
 import AcceptanceRow from './AcceptanceRow';
 
 const ACCEPTANCE_LIST_FILTER_STORAGE_KEY = 'lobehub-acceptance-list-filter';
@@ -54,6 +65,20 @@ const styles = createStaticStyles(({ css }) => ({
 
     padding-block: 8px 24px;
     padding-inline: 8px;
+  `,
+  groupList: css`
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  `,
+  groupTitle: css`
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+
+    font-size: 12px;
+    font-weight: 500;
+    color: ${cssVar.colorTextSecondary};
   `,
   page: css`
     width: 100%;
@@ -130,6 +155,8 @@ const WorkbenchAcceptanceList = memo(() => {
   );
   const filter = normalizeAcceptanceListFilter(storedFilter);
   const filtered = filterAcceptanceList(data ?? [], filter, query);
+  const groups = groupAcceptanceList(filtered);
+  const showGroups = hasProjectAcceptanceGroups(groups);
   const trimmedQuery = query.trim();
 
   const filterItems: DropdownItem[] = (
@@ -157,13 +184,16 @@ const WorkbenchAcceptanceList = memo(() => {
           <Text strong style={{ flex: 1, fontSize: 17 }}>
             {t('acceptance.workspace.title')}
           </Text>
-          <DropdownMenu items={filterItems} placement={'bottomRight'}>
-            <ActionIcon
-              active={filter !== 'all'}
-              icon={ListFilter}
-              title={t('acceptance.workspace.filters.title')}
-            />
-          </DropdownMenu>
+          <Flexbox horizontal gap={2}>
+            <DropdownMenu items={filterItems} placement={'bottomRight'}>
+              <ActionIcon
+                active={filter !== 'all'}
+                icon={ListFilter}
+                title={t('acceptance.workspace.filters.title')}
+              />
+            </DropdownMenu>
+            {!showGroups && <AcceptanceProjectActions />}
+          </Flexbox>
         </Flexbox>
         <label className={styles.search}>
           <Icon color={cssVar.colorTextQuaternary} icon={Search} size={15} />
@@ -226,9 +256,40 @@ const WorkbenchAcceptanceList = memo(() => {
           )
         ) : (
           <div className={styles.list}>
-            {filtered.map((item) => (
-              <AcceptanceRow item={item} key={item.id} onChanged={mutate} />
-            ))}
+            {showGroups ? (
+              <Accordion defaultExpandedKeys={groups.map(({ key }) => key)} gap={4}>
+                {groups.map((group) => (
+                  <AccordionItem
+                    itemKey={group.key}
+                    key={group.key}
+                    paddingBlock={4}
+                    paddingInline={8}
+                    action={
+                      <AcceptanceProjectActions
+                        projectId={group.projectName ? group.key : undefined}
+                      />
+                    }
+                    title={
+                      <span className={styles.groupTitle}>
+                        <Icon icon={FolderClosed} size={14} />
+                        <span>
+                          {group.projectName ?? t('acceptance.workspace.groups.ungrouped')} ·{' '}
+                          {group.items.length}
+                        </span>
+                      </span>
+                    }
+                  >
+                    <div className={styles.groupList}>
+                      {group.items.map((item) => (
+                        <AcceptanceRow item={item} key={item.id} onChanged={mutate} />
+                      ))}
+                    </div>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            ) : (
+              filtered.map((item) => <AcceptanceRow item={item} key={item.id} onChanged={mutate} />)
+            )}
           </div>
         )}
       </div>

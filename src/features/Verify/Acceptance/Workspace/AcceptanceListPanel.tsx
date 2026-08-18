@@ -1,6 +1,8 @@
 'use client';
 
 import {
+  Accordion,
+  AccordionItem,
   ActionIcon,
   Center,
   DraggablePanel,
@@ -18,6 +20,7 @@ import isEqual from 'fast-deep-equal';
 import {
   ArrowLeft,
   Check,
+  FolderClosed,
   ListFilter,
   PanelLeftClose,
   ScrollText,
@@ -42,7 +45,9 @@ import {
   filterAcceptanceList,
   normalizeAcceptanceListFilter,
 } from './acceptanceListFilter';
+import AcceptanceProjectActions from './AcceptanceProjectActions';
 import AcceptanceRow from './AcceptanceRow';
+import { groupAcceptanceList, hasProjectAcceptanceGroups } from './groupAcceptanceList';
 
 const PANEL_MIN = 260;
 const PANEL_MAX = 420;
@@ -161,6 +166,20 @@ const styles = createStaticStyles(({ css }) => ({
     padding-block: 6px 16px;
     padding-inline: 8px;
   `,
+  groupList: css`
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  `,
+  groupTitle: css`
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+
+    font-size: 12px;
+    font-weight: 500;
+    color: ${cssVar.colorTextSecondary};
+  `,
   emptyState: css`
     height: 100%;
     min-height: 240px;
@@ -208,6 +227,8 @@ const AcceptanceListPanel = memo<ReportPanelExpand>(({ expand, isNarrow, setExpa
   );
   const filter = normalizeAcceptanceListFilter(storedFilter);
   const filtered = filterAcceptanceList(data ?? [], filter, query);
+  const groups = groupAcceptanceList(filtered);
+  const showGroups = hasProjectAcceptanceGroups(groups);
   const trimmedQuery = query.trim();
 
   const filterItems: DropdownItem[] = (
@@ -291,6 +312,7 @@ const AcceptanceListPanel = memo<ReportPanelExpand>(({ expand, isNarrow, setExpa
                 title={t('acceptance.workspace.filters.title')}
               />
             </DropdownMenu>
+            {!showGroups && <AcceptanceProjectActions />}
           </div>
         </div>
 
@@ -344,14 +366,52 @@ const AcceptanceListPanel = memo<ReportPanelExpand>(({ expand, isNarrow, setExpa
             )
           ) : (
             <div className={styles.list}>
-              {filtered.map((item) => (
-                <AcceptanceRow
-                  active={item.id === acceptanceId}
-                  item={item}
-                  key={item.id}
-                  onChanged={mutate}
-                />
-              ))}
+              {showGroups ? (
+                <Accordion defaultExpandedKeys={groups.map(({ key }) => key)} gap={4}>
+                  {groups.map((group) => (
+                    <AccordionItem
+                      itemKey={group.key}
+                      key={group.key}
+                      paddingBlock={4}
+                      paddingInline={8}
+                      action={
+                        <AcceptanceProjectActions
+                          projectId={group.projectName ? group.key : undefined}
+                        />
+                      }
+                      title={
+                        <span className={styles.groupTitle}>
+                          <Icon icon={FolderClosed} size={14} />
+                          <span>
+                            {group.projectName ?? t('acceptance.workspace.groups.ungrouped')} ·{' '}
+                            {group.items.length}
+                          </span>
+                        </span>
+                      }
+                    >
+                      <div className={styles.groupList}>
+                        {group.items.map((item) => (
+                          <AcceptanceRow
+                            active={item.id === acceptanceId}
+                            item={item}
+                            key={item.id}
+                            onChanged={mutate}
+                          />
+                        ))}
+                      </div>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              ) : (
+                filtered.map((item) => (
+                  <AcceptanceRow
+                    active={item.id === acceptanceId}
+                    item={item}
+                    key={item.id}
+                    onChanged={mutate}
+                  />
+                ))
+              )}
             </div>
           )}
         </Flexbox>
