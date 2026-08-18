@@ -154,7 +154,9 @@ export const buildAgentArtworkPrompt = (input: AgentArtworkPromptInput): string 
     // rendering style itself — the user may regenerate with a different preset,
     // and the style direction above must stay authoritative.
     const referenceDirection = counterpartReferenceUrl?.trim()
-      ? `\n\nUse the attached existing profile background as the visual source of truth. Preserve its dominant color palette, materials, lighting, atmosphere, and recurring motifs while distilling them into a single avatar subject. The avatar must feel designed as part of the same identity system, not merely depict a related topic.`
+      ? composition === 'fullBody'
+        ? `\n\nUse the attached existing avatar as the exact character source of truth. Preserve the same identity, face, hair, outfit, accessories, color palette, materials, and rendering style while extending that character into a complete head-to-toe pose. Do not redesign or reinterpret the character.`
+        : `\n\nUse the attached existing profile background as the visual source of truth. Preserve its dominant color palette, materials, lighting, atmosphere, and recurring motifs while distilling them into a single avatar subject. The avatar must feel designed as part of the same identity system, not merely depict a related topic.`
       : '';
 
     const compositionDirection =

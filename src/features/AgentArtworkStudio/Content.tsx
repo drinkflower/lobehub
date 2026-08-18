@@ -13,6 +13,8 @@ import { useAgentStore } from '@/store/agent';
 import { agentArtworkSelectors, agentSelectors } from '@/store/agent/selectors';
 import { useFileStore } from '@/store/file';
 
+import { generateCharacterSet } from './generateCharacterSet';
+
 const MAX_AVATAR_SIZE = 1024 * 1024;
 
 interface AgentArtworkStudioContentProps {
@@ -55,17 +57,13 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
 
       setGeneratingTarget(composition ?? 'both');
       try {
-        if (!composition || composition === 'fullBody') {
-          const fullBodyUrl = await generateAgentArtwork({
-            ...commonInput,
-            composition: 'fullBody',
-            persist: false,
-          });
-          if (fullBodyUrl) setFullBody(fullBodyUrl);
-        }
-        if (!composition || composition === 'avatar') {
-          await generateAgentArtwork({ ...commonInput, composition: 'avatar' });
-        }
+        const result = await generateCharacterSet({
+          composition,
+          currentAvatarUrl: meta.avatar,
+          generate: generateAgentArtwork,
+          input: commonInput,
+        });
+        if (result.fullBodyUrl) setFullBody(result.fullBodyUrl);
       } catch {
         // The Agent store owns the persistent error state rendered below.
       } finally {
@@ -78,6 +76,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
       generateAgentArtwork,
       meta.backgroundColor,
       meta.description,
+      meta.avatar,
       meta.name,
       meta.title,
       systemRole,

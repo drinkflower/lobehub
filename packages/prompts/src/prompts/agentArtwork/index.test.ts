@@ -160,6 +160,21 @@ describe('buildAgentArtworkPrompt', () => {
     expect(prompt).not.toContain('mascot-like head-dominant look');
   });
 
+  it('uses an existing avatar as the exact character reference for a full-body image', () => {
+    const prompt = buildAgentArtworkPrompt({
+      composition: 'fullBody',
+      id: 'agent-1',
+      kind: 'avatar',
+      referenceImageUrl: 'https://example.com/avatar.webp',
+      style: 'anime',
+    });
+
+    expect(prompt).toContain('existing avatar as the exact character source of truth');
+    expect(prompt).toContain('same identity, face, hair, outfit');
+    expect(prompt).toContain('Do not redesign or reinterpret the character');
+    expect(prompt).not.toContain('existing profile background');
+  });
+
   it('steers the motif away from generic technology clichés in every prompt', () => {
     for (const kind of ['avatar', 'background'] as const) {
       const prompt = buildAgentArtworkPrompt({ id: 'agent-1', kind });
