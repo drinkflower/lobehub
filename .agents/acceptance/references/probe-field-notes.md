@@ -750,6 +750,12 @@ executionTarget: 'local'` in `agencyConfig`) + one message per case asking CC to
 - **Then note which model the product actually picked** before attributing quality or format to a model: read the product's own selector rather than assuming (`selectAgentArtworkModel(enabledImageModelList(...))` over CDP). Disabling a provider row is enough to change the pick.
 - **Style presets that attach reference images can still fail after all three**: local presigned URLs may return an S3 XML error body, which reaches the model as `Unsupported MIME type: application/xml`. Pick a preset with no reference images to test generation itself.
 
+### E23c. A green desktop surface can be talking to another worktree's dev server
+
+- **Situation**: verifying a schema-backed field from the Electron app. Writes landed, but reads came back without the new column, and the app looked healthy throughout.
+- **Cause**: the desktop client proxies to whatever `dataSyncConfig.remoteServerUrl` says (E-note above). Any worktree can occupy that port — here the port was taken by a dev server started from the _main_ repo, whose branch has no such column. `init-dev-env.sh dev-next` then dies with `EADDRINUSE` in a log you are not watching, and the app keeps serving the other branch's code.
+- **Works**: confirm the owner before trusting a read — `lsof -p "$(lsof -ti tcp:<port> -sTCP:LISTEN | head -1)" | grep cwd` must print the worktree under test. Do not kill a server you did not start; run yours on a free port (and repoint the app) or wait for the port. To separate a server-code problem from a client one, exercise the service directly with `bun` against the same `DATABASE_URL` — it uses the worktree's own schema.
+
 ### E25. Electron `will-attach-webview` params carry NO custom attributes — identity via data-\* never arrives
 
 - **Situation**: a main-process controller needs to know WHICH renderer feature a mounting
