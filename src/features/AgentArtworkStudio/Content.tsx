@@ -1,6 +1,7 @@
 'use client';
 
 import type { AgentArtworkComposition, AgentArtworkStyle } from '@lobechat/prompts';
+import type { AgentProfile } from '@lobechat/types';
 import { toast } from '@lobehub/ui/base-ui';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -54,7 +55,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
   const appOrigin = useAppOrigin();
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
   const fullBody = useAgentStore(agentSelectors.getAgentFullBodyArtworkById(agentId));
-  const metadata = useAgentStore(agentSelectors.getAgentMetadataById(agentId));
+  const profile = useAgentStore(agentSelectors.getAgentProfileById(agentId));
   const systemRole = useAgentStore(
     (s) => agentSelectors.getAgentConfigById(agentId)(s)?.systemRole,
   );
@@ -71,10 +72,11 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
   const generating = generation?.status === 'generating' && generation.kind === 'avatar';
   const generationFailed = generation?.status === 'error' && generation.kind === 'avatar';
 
-  const saveFullBodyArtwork = useCallback(
-    (url: string) =>
-      updateAgentMetaById(agentId, { metadata: { ...metadata, fullBodyArtwork: url } }),
-    [agentId, metadata, updateAgentMetaById],
+  // `profile` is one jsonb bag, so a partial write has to merge rather than replace.
+  const saveProfile = useCallback(
+    (patch: Partial<AgentProfile>) =>
+      updateAgentMetaById(agentId, { profile: { ...profile, ...patch } }),
+    [agentId, profile, updateAgentMetaById],
   );
 
   const generate = useCallback(
@@ -105,7 +107,11 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
           input: commonInput,
         });
         if (result.fullBodyUrl) {
-          await saveFullBodyArtwork(await toTransparentFullBody(result.fullBodyUrl));
+          await saveProfile({
+            artworkDirection: direction?.trim() || undefined,
+            artworkStyle: nextStyle,
+            fullBodyArtwork: await toTransparentFullBody(result.fullBodyUrl),
+          });
         }
       } catch {
         // The Agent store owns the persistent error state rendered below.
@@ -122,7 +128,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
       meta.avatar,
       meta.name,
       meta.title,
-      saveFullBodyArtwork,
+      saveProfile,
       systemRole,
       toTransparentFullBody,
     ],
@@ -141,7 +147,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
         if (!result?.url) throw new Error('Upload returned no URL');
         await cancelAgentArtworkGeneration(agentId);
         if (composition === 'avatar') await updateAgentMetaById(agentId, { avatar: result.url });
-        else await saveFullBodyArtwork(result.url);
+        else await saveProfile({ fullBodyArtwork: result.url });
       } catch (error) {
         console.error('Failed to upload agent avatar:', error);
         toast.error(t('settingAgent.artwork.uploadFailed'));
@@ -152,7 +158,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
     [
       agentId,
       cancelAgentArtworkGeneration,
-      saveFullBodyArtwork,
+      saveProfile,
       t,
       updateAgentMetaById,
       uploadWithProgress,
@@ -167,6 +173,8 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
       generatingTarget={generatingTarget}
       generatingTitle={t('settingAgent.artwork.avatar.generating')}
       generationFailed={generationFailed}
+      initialDirection={profile?.artworkDirection}
+      initialStyle={profile?.artworkStyle}
       uploading={uploading}
       onCancel={() => void cancelAgentArtworkGeneration(agentId)}
       onGenerate={generate}

@@ -224,6 +224,10 @@ export interface ArtworkStudioContentProps {
   generatingTitle: string;
   /** True when the last generation attempt failed and can be retried. */
   generationFailed?: boolean;
+  /** Free-text direction the subject was last generated with. */
+  initialDirection?: string;
+  /** Style preset the subject was last generated with. */
+  initialStyle?: string;
   onCancel: () => void;
   onGenerate: (
     style: AgentArtworkStyle,
@@ -247,6 +251,8 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
     generating,
     generatingTarget,
     generationFailed,
+    initialDirection,
+    initialStyle,
     onCancel,
     onGenerate,
     onUpload,
@@ -261,8 +267,14 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
 
     const avatarInputRef = useRef<HTMLInputElement>(null);
     const fullBodyInputRef = useRef<HTMLInputElement>(null);
-    const [style, setStyle] = useState<AgentArtworkStyle>('anime');
-    const [direction, setDirection] = useState('');
+    // Resume the subject's own last choice; a preset that no longer exists
+    // falls back rather than leaving the gallery with nothing selected.
+    const [style, setStyle] = useState<AgentArtworkStyle>(() =>
+      GALLERY_STYLES.includes(initialStyle as AgentArtworkStyle)
+        ? (initialStyle as AgentArtworkStyle)
+        : 'anime',
+    );
+    const [direction, setDirection] = useState(initialDirection ?? '');
     const [generateExpanded, setGenerateExpanded] = useState(true);
     const selectStyle = useCallback((next: AgentArtworkStyle) => setStyle(next), []);
 
