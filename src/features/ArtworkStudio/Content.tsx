@@ -1,7 +1,7 @@
 'use client';
 
 import { imageUrl } from '@lobechat/const';
-import type { AgentArtworkComposition, AgentArtworkStyle } from '@lobechat/prompts';
+import type { AgentArtworkStyle } from '@lobechat/prompts';
 import { AGENT_ARTWORK_STYLES } from '@lobechat/prompts';
 import { Alert, Avatar, Center, Flexbox, Icon, Text } from '@lobehub/ui';
 import { Button, useModalContext } from '@lobehub/ui/base-ui';
@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { avatarRemountKey, openFilePicker } from '@/features/AgentProfileArtwork/utils';
+import { DEFAULT_CHIEF_AGENT_ARTWORK } from '@/features/ChiefAgent/artwork';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useAiInfraStore } from '@/store/aiInfra';
 import { aiProviderSelectors } from '@/store/aiInfra/selectors';
@@ -126,10 +127,6 @@ const styles = createStaticStyles(({ css }) => ({
       border-color: ${cssVar.colorBorder};
     }
   `,
-  outputCardActive: css`
-    border-color: ${cssVar.colorPrimary};
-    background: ${cssVar.colorFillTertiary};
-  `,
   outputGrid: css`
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -180,6 +177,8 @@ export interface ArtworkStudioContentProps {
   avatar?: string | null;
   /** Copy under the "make your own" heading — names the subject being dressed. */
   diyHint: string;
+  /** Current or freshly generated full-body artwork. */
+  fullBody?: string | null;
   /** Copy under the "generate with AI" heading. */
   generateHint: string;
   generating?: boolean;
@@ -188,7 +187,7 @@ export interface ArtworkStudioContentProps {
   /** True when the last generation attempt failed and can be retried. */
   generationFailed?: boolean;
   onCancel: () => void;
-  onGenerate: (style: AgentArtworkStyle, composition: AgentArtworkComposition) => void;
+  onGenerate: (style: AgentArtworkStyle) => void;
   onUpload: (file: File) => void;
   uploading?: boolean;
 }
@@ -201,6 +200,7 @@ export interface ArtworkStudioContentProps {
 const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
   ({
     avatar,
+    fullBody,
     diyHint,
     generateHint,
     generatingTitle,
@@ -220,8 +220,6 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
 
     const uploadInputRef = useRef<HTMLInputElement>(null);
     const [style, setStyle] = useState<AgentArtworkStyle>('anime');
-    const [composition, setComposition] = useState<AgentArtworkComposition>('avatar');
-
     const selectStyle = useCallback((next: AgentArtworkStyle) => setStyle(next), []);
 
     const keySelect = useCallback(
@@ -276,20 +274,7 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
             <Text className={styles.hint}>{t('artworkStudio.composition.hint')}</Text>
           </Flexbox>
           <div className={styles.outputGrid}>
-            <Flexbox
-              align={'center'}
-              className={`${styles.outputCard} ${composition === 'avatar' ? styles.outputCardActive : ''}`}
-              gap={10}
-              role={'button'}
-              tabIndex={0}
-              onClick={() => setComposition('avatar')}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  setComposition('avatar');
-                }
-              }}
-            >
+            <Flexbox align={'center'} className={styles.outputCard} gap={10}>
               <Flexbox horizontal align={'center'} gap={6}>
                 <Icon icon={CircleUserRound} size={16} />
                 <Text className={styles.sectionTitle}>{t('artworkStudio.composition.avatar')}</Text>
@@ -301,23 +286,10 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                   shape={'square'}
                   size={148}
                 />
-                {composition === 'avatar' ? generationOverlay : null}
+                {generationOverlay}
               </Center>
             </Flexbox>
-            <Flexbox
-              align={'center'}
-              className={`${styles.outputCard} ${composition === 'fullBody' ? styles.outputCardActive : ''}`}
-              gap={10}
-              role={'button'}
-              tabIndex={0}
-              onClick={() => setComposition('fullBody')}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  setComposition('fullBody');
-                }
-              }}
-            >
+            <Flexbox align={'center'} className={styles.outputCard} gap={10}>
               <Flexbox horizontal align={'center'} gap={6}>
                 <Icon icon={PersonStanding} size={16} />
                 <Text className={styles.sectionTitle}>
@@ -325,16 +297,16 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                 </Text>
               </Flexbox>
               <Center className={`${styles.outputPreview} ${styles.outputPreviewFullBody}`}>
-                {avatar ? (
+                {fullBody ? (
                   <img
                     alt={t('artworkStudio.preview.fullBody')}
                     className={styles.previewBodyImage}
-                    src={avatar}
+                    src={fullBody}
                   />
                 ) : (
                   <Icon icon={PersonStanding} size={64} />
                 )}
-                {composition === 'fullBody' ? generationOverlay : null}
+                {generationOverlay}
               </Center>
             </Flexbox>
           </div>
@@ -362,7 +334,7 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                         className={styles.galleryThumb}
                         src={
                           item === 'lobe'
-                            ? imageUrl('agent-artwork-styles/style-clay.jpg')
+                            ? DEFAULT_CHIEF_AGENT_ARTWORK.avatar
                             : imageUrl(`agent-artwork-styles/style-${item}.webp`)
                         }
                       />
@@ -385,13 +357,9 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                 disabled={generating}
                 icon={WandSparkles}
                 type={'primary'}
-                onClick={() => onGenerate(style, composition)}
+                onClick={() => onGenerate(style)}
               >
-                {t(
-                  composition === 'fullBody'
-                    ? 'artworkStudio.generate.fullBody'
-                    : 'artworkStudio.generate.avatar',
-                )}
+                {t('artworkStudio.generate.characterSet')}
               </Button>
               {generationFailed ? (
                 <Alert showIcon title={t('artworkStudio.generateFailed')} type={'error'} />

@@ -1,12 +1,13 @@
 'use client';
 
-import type { AgentArtworkComposition, AgentArtworkStyle } from '@lobechat/prompts';
+import type { AgentArtworkStyle } from '@lobechat/prompts';
 import { toast } from '@lobehub/ui/base-ui';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { resolveAgentBackground } from '@/features/AgentProfileArtwork/utils';
 import { ArtworkStudioContent, styleReferencesForArtworkStyle } from '@/features/ArtworkStudio';
+import { DEFAULT_CHIEF_AGENT_ARTWORK } from '@/features/ChiefAgent/artwork';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { useAgentStore } from '@/store/agent';
 import { agentArtworkSelectors, agentSelectors } from '@/store/agent/selectors';
@@ -32,14 +33,14 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
   const uploadWithProgress = useFileStore((s) => s.uploadWithProgress);
 
   const [uploading, setUploading] = useState(false);
+  const [fullBody, setFullBody] = useState<string>();
 
   const generating = generation?.status === 'generating' && generation.kind === 'avatar';
   const generationFailed = generation?.status === 'error' && generation.kind === 'avatar';
 
   const generate = useCallback(
-    (nextStyle: AgentArtworkStyle, composition: AgentArtworkComposition) => {
-      generateAgentArtwork({
-        composition,
+    async (nextStyle: AgentArtworkStyle) => {
+      const commonInput = {
         description: meta.description,
         id: agentId,
         kind: 'avatar',
@@ -49,9 +50,19 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
         styleReferenceImageUrls: styleReferencesForArtworkStyle(nextStyle, appOrigin),
         systemRole,
         title: meta.title,
-      }).catch(() => {
+      } as const;
+
+      try {
+        const fullBodyUrl = await generateAgentArtwork({
+          ...commonInput,
+          composition: 'fullBody',
+          persist: false,
+        });
+        if (fullBodyUrl) setFullBody(fullBodyUrl);
+        await generateAgentArtwork({ ...commonInput, composition: 'avatar' });
+      } catch {
         // The Agent store owns the persistent error state rendered below.
-      });
+      }
     },
     [
       agentId,
@@ -91,6 +102,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
     <ArtworkStudioContent
       avatar={meta.avatar}
       diyHint={t('settingAgent.artwork.studio.diyHint')}
+      fullBody={fullBody || DEFAULT_CHIEF_AGENT_ARTWORK.hero}
       generateHint={t('settingAgent.artwork.studio.generateHint')}
       generating={generating}
       generatingTitle={t('settingAgent.artwork.avatar.generating')}

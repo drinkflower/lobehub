@@ -87,6 +87,29 @@ describe('AgentArtworkAction', () => {
     expect(useAgentStore.getState().agentArtworkGenerationMap?.['agent-a']).toBeUndefined();
   });
 
+  it('returns companion artwork without replacing persisted agent metadata', async () => {
+    vi.mocked(generationTopicService.createTopic).mockResolvedValue('topic-1');
+    vi.mocked(imageService.createImage).mockResolvedValue({
+      data: { generations: [{ asyncTaskId: 'task-1', id: 'generation-1' }] },
+      success: true,
+    } as never);
+    vi.mocked(generationService.getGenerationStatus).mockResolvedValue({
+      generation: { asset: { url: 'https://example.com/full-body.webp' } },
+      status: AsyncTaskStatus.Success,
+    } as never);
+    const updateAgentMetaById = vi.fn().mockResolvedValue(undefined);
+    useAgentStore.setState({ updateAgentMetaById });
+
+    const url = await useAgentStore.getState().generateAgentArtwork({
+      ...input,
+      composition: 'fullBody',
+      persist: false,
+    });
+
+    expect(url).toBe('https://example.com/full-body.webp');
+    expect(updateAgentMetaById).not.toHaveBeenCalled();
+  });
+
   it('passes the existing avatar as a reference image when generating a background', async () => {
     vi.mocked(getAiInfraStoreState).mockReturnValue({
       enabledImageModelList: [
