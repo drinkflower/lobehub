@@ -3,7 +3,17 @@
 import { imageUrl } from '@lobechat/const';
 import type { AgentArtworkComposition, AgentArtworkStyle } from '@lobechat/prompts';
 import { AGENT_ARTWORK_STYLES } from '@lobechat/prompts';
-import { Alert, Avatar, Center, Flexbox, Icon, Text } from '@lobehub/ui';
+import {
+  Accordion,
+  AccordionItem,
+  Alert,
+  Avatar,
+  Center,
+  Flexbox,
+  Icon,
+  Input,
+  Text,
+} from '@lobehub/ui';
 import { Button, useModalContext } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
@@ -39,6 +49,7 @@ const AVATAR_SIZE = PREVIEW_HEIGHT - 40;
  * it is sized as a control strip.
  */
 const STYLE_THUMB_SIZE = 64;
+const STYLE_SECTION_KEY = 'style';
 
 const styles = createStaticStyles(({ css }) => ({
   galleryCheck: css`
@@ -214,7 +225,11 @@ export interface ArtworkStudioContentProps {
   /** True when the last generation attempt failed and can be retried. */
   generationFailed?: boolean;
   onCancel: () => void;
-  onGenerate: (style: AgentArtworkStyle, composition?: AgentArtworkComposition) => void;
+  onGenerate: (
+    style: AgentArtworkStyle,
+    composition?: AgentArtworkComposition,
+    direction?: string,
+  ) => void;
   onUpload: (file: File, composition: AgentArtworkComposition) => void;
   uploading?: boolean;
 }
@@ -247,6 +262,8 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
     const avatarInputRef = useRef<HTMLInputElement>(null);
     const fullBodyInputRef = useRef<HTMLInputElement>(null);
     const [style, setStyle] = useState<AgentArtworkStyle>('anime');
+    const [direction, setDirection] = useState('');
+    const [styleExpanded, setStyleExpanded] = useState(true);
     const selectStyle = useCallback((next: AgentArtworkStyle) => setStyle(next), []);
 
     const keySelect = useCallback(
@@ -316,7 +333,7 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                   style={{ flex: 1 }}
                   onClick={(event) => {
                     event.stopPropagation();
-                    onGenerate(style, 'avatar');
+                    onGenerate(style, 'avatar', direction);
                   }}
                 >
                   {t('artworkStudio.generate.avatar')}
@@ -366,7 +383,7 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                   style={{ flex: 1 }}
                   onClick={(event) => {
                     event.stopPropagation();
-                    onGenerate(style, 'fullBody');
+                    onGenerate(style, 'fullBody', direction);
                   }}
                 >
                   {t('artworkStudio.generate.fullBody')}
@@ -385,52 +402,72 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
 
         {canGenerate ? (
           <>
-            <Flexbox gap={10}>
-              <Text className={styles.controlLabel}>{t('artworkStudio.style.title')}</Text>
-              <div className={styles.galleryGrid}>
-                {GALLERY_STYLES.map((item) => (
-                  <Flexbox
-                    className={`${styles.galleryItem} ${style === item ? styles.galleryItemActive : ''}`}
-                    gap={6}
-                    key={item}
-                    role={'button'}
-                    tabIndex={0}
-                    onClick={() => selectStyle(item)}
-                    onKeyDown={keySelect(item)}
-                  >
-                    <div className={styles.galleryThumbWrap}>
-                      <img
-                        alt={t(`artworkStudio.style.${item}`)}
-                        className={styles.galleryThumb}
-                        src={
-                          item === 'lobe'
-                            ? LOBE_STYLE_PREVIEW
-                            : imageUrl(`agent-artwork-styles/style-${item}.webp`)
-                        }
-                      />
-                      {style === item ? (
-                        <Center className={styles.galleryCheck}>
-                          <Icon icon={Check} size={13} />
-                        </Center>
-                      ) : null}
-                    </div>
-                    <Text ellipsis className={styles.galleryLabel}>
-                      {t(`artworkStudio.style.${item}`)}
-                    </Text>
-                  </Flexbox>
-                ))}
-              </div>
-            </Flexbox>
-
-            <Flexbox gap={8}>
-              <Button
-                disabled={generating}
-                icon={WandSparkles}
-                type={'fill'}
-                onClick={() => onGenerate(style)}
+            <Accordion
+              expandedKeys={styleExpanded ? [STYLE_SECTION_KEY] : []}
+              gap={4}
+              onExpandedChange={(keys) => setStyleExpanded(keys.length > 0)}
+            >
+              <AccordionItem
+                itemKey={STYLE_SECTION_KEY}
+                paddingBlock={2}
+                paddingInline={0}
+                title={
+                  <Text className={styles.controlLabel}>{t('artworkStudio.style.title')}</Text>
+                }
               >
-                {t('artworkStudio.generate.characterSet')}
-              </Button>
+                <div className={styles.galleryGrid}>
+                  {GALLERY_STYLES.map((item) => (
+                    <Flexbox
+                      className={`${styles.galleryItem} ${style === item ? styles.galleryItemActive : ''}`}
+                      gap={6}
+                      key={item}
+                      role={'button'}
+                      tabIndex={0}
+                      onClick={() => selectStyle(item)}
+                      onKeyDown={keySelect(item)}
+                    >
+                      <div className={styles.galleryThumbWrap}>
+                        <img
+                          alt={t(`artworkStudio.style.${item}`)}
+                          className={styles.galleryThumb}
+                          src={
+                            item === 'lobe'
+                              ? LOBE_STYLE_PREVIEW
+                              : imageUrl(`agent-artwork-styles/style-${item}.webp`)
+                          }
+                        />
+                        {style === item ? (
+                          <Center className={styles.galleryCheck}>
+                            <Icon icon={Check} size={13} />
+                          </Center>
+                        ) : null}
+                      </div>
+                      <Text ellipsis className={styles.galleryLabel}>
+                        {t(`artworkStudio.style.${item}`)}
+                      </Text>
+                    </Flexbox>
+                  ))}
+                </div>
+              </AccordionItem>
+            </Accordion>
+
+            <Flexbox gap={10}>
+              <Input
+                disabled={generating}
+                placeholder={t('artworkStudio.direction.placeholder')}
+                value={direction}
+                onChange={(event) => setDirection(event.target.value)}
+              />
+              <Flexbox horizontal>
+                <Button
+                  disabled={generating}
+                  icon={WandSparkles}
+                  type={'fill'}
+                  onClick={() => onGenerate(style, undefined, direction)}
+                >
+                  {t('artworkStudio.generate.characterSet')}
+                </Button>
+              </Flexbox>
               {generationFailed ? (
                 <Alert showIcon title={t('artworkStudio.generateFailed')} type={'error'} />
               ) : null}

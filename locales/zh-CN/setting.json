@@ -244,6 +244,7 @@
   "artworkStudio.cancel": "取消生成",
   "artworkStudio.composition.avatar": "头像",
   "artworkStudio.composition.fullBody": "全身形象",
+  "artworkStudio.direction.placeholder": "补充形象描述，例如「戴眼镜的少年」「机械朋克」（选填）",
   "artworkStudio.diyTitle": "自行制作",
   "artworkStudio.enableModel": "去启用",
   "artworkStudio.generate.avatar": "生成",

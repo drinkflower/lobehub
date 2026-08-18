@@ -109,12 +109,32 @@ const buildStyleReferenceDirection = (
   return `\n\nUse the attached ${imageWord} as the target character style — the same ${compositionQualities}. Do not copy ${possessive} exact faces, hats, or subjects — invent a new character for the ${subject} described above.`;
 };
 
+/**
+ * The user's own words are the most specific input we have, so they go last —
+ * models weight the tail of a prompt heavily — while the canvas, composition
+ * and no-text rules stay authoritative because product surfaces depend on them.
+ */
+const buildUserDirection = (direction?: string | null): string => {
+  const trimmed = direction?.trim();
+  if (!trimmed) return '';
+
+  return `\n\nThe user asked for this specifically: ${escapeXmlContent(trimmed.slice(0, 600))}. Follow it wherever it does not conflict with the canvas, composition, and no-text rules above.`;
+};
+
 const countStyleReferences = (urls?: string[] | null): number =>
   urls?.filter((url) => url.trim()).length ?? 0;
 
 export interface AgentArtworkPromptInput {
   composition?: AgentArtworkComposition;
   description?: string | null;
+  /**
+   * Free-text direction the user typed in the studio ("a boy with glasses",
+   * "cyberpunk mechanic"). It is the most specific thing we know about what
+   * they want, so it lands last and is allowed to override the derived
+   * concept — but not the canvas or composition rules, which the product
+   * depends on.
+   */
+  direction?: string | null;
   id: string;
   kind: AgentArtworkKind;
   name?: string | null;
@@ -179,6 +199,7 @@ export const buildAgentArtworkPrompt = (input: AgentArtworkPromptInput): string 
     'agent',
   );
   const counterpartReferenceUrl = styleReferenceCount > 0 ? undefined : input.referenceImageUrl;
+  const userDirection = buildUserDirection(input.direction);
 
   if (input.kind === 'avatar') {
     // The reference paragraph preserves palette / materials / motifs but not the
@@ -201,7 +222,7 @@ export const buildAgentArtworkPrompt = (input: AgentArtworkPromptInput): string 
 
 ${agentContext}
 
-Translate the agent's identity, purpose, and personality into one coherent visual concept. Use a single centered subject with a simple silhouette. ${compositionDirection} ${styleDirection} ${MOTIF_DIRECTION} ${canvasDirection}${styleReferenceDirection}${referenceDirection}`;
+Translate the agent's identity, purpose, and personality into one coherent visual concept. Use a single centered subject with a simple silhouette. ${compositionDirection} ${styleDirection} ${MOTIF_DIRECTION} ${canvasDirection}${styleReferenceDirection}${referenceDirection}${userDirection}`;
   }
 
   const referenceDirection = counterpartReferenceUrl?.trim()
@@ -212,7 +233,7 @@ Translate the agent's identity, purpose, and personality into one coherent visua
 
 ${agentContext}
 
-Translate the agent's identity, purpose, and personality into an abstract environment. ${styleDirection} ${MOTIF_DIRECTION} Use generous negative space and a balanced composition. Do not use a person portrait, words, letters, a logo, or a border.${styleReferenceDirection}${referenceDirection}`;
+Translate the agent's identity, purpose, and personality into an abstract environment. ${styleDirection} ${MOTIF_DIRECTION} Use generous negative space and a balanced composition. Do not use a person portrait, words, letters, a logo, or a border.${styleReferenceDirection}${referenceDirection}${userDirection}`;
 };
 
 /**

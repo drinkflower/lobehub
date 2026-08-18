@@ -10,6 +10,7 @@ import {
 } from '@lobechat/const';
 import {
   agentDisplayName,
+  type AgentMetadata,
   type AgentMode,
   type KnowledgeItem,
   type LobeAgentConfig,
@@ -111,10 +112,15 @@ const getAgentMetaById =
  * Kept out of {@link getAgentMetaById} because `MetaData` is shared with
  * sessions and groups, which have no such artwork.
  */
+const getAgentMetadataById =
+  (agentId: string) =>
+  (s: AgentStoreState): AgentMetadata | undefined =>
+    s.agentMap[agentId]?.metadata ?? undefined;
+
 const getAgentFullBodyArtworkById =
   (agentId: string) =>
   (s: AgentStoreState): string | undefined =>
-    s.agentMap[agentId]?.fullBodyArtwork || undefined;
+    s.agentMap[agentId]?.metadata?.fullBodyArtwork || undefined;
 
 // ==========   Config   ============== //
 
@@ -392,6 +398,7 @@ export const agentSelectors = {
   getAgentDocumentsById,
   getAgentFullBodyArtworkById,
   getAgentMetaById,
+  getAgentMetadataById,
   getAgentSlugById,
   hasEnabledKnowledge,
   hasEnabledKnowledgeBases,

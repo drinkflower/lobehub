@@ -229,6 +229,35 @@ describe('buildAgentArtworkPrompt', () => {
     expect(prompt).not.toContain('existing profile background');
   });
 
+  it('appends the user direction last so it outweighs the derived concept', () => {
+    const prompt = buildAgentArtworkPrompt({
+      direction: '戴眼镜的少年 & 机械风',
+      id: 'agent-1',
+      kind: 'avatar',
+    });
+
+    expect(prompt).toContain('The user asked for this specifically:');
+    expect(prompt).toContain('戴眼镜的少年 &amp; 机械风');
+    expect(prompt).toContain('does not conflict with the canvas, composition, and no-text rules');
+    expect(prompt.trimEnd().endsWith('rules above.')).toBe(true);
+  });
+
+  it('ignores a blank user direction', () => {
+    const prompt = buildAgentArtworkPrompt({ direction: '   ', id: 'agent-1', kind: 'avatar' });
+
+    expect(prompt).not.toContain('The user asked for this specifically');
+  });
+
+  it('carries the user direction into a cover prompt too', () => {
+    const prompt = buildAgentArtworkPrompt({
+      direction: 'deep sea',
+      id: 'agent-1',
+      kind: 'background',
+    });
+
+    expect(prompt).toContain('The user asked for this specifically: deep sea');
+  });
+
   it('steers the motif away from generic technology clichés in every prompt', () => {
     for (const kind of ['avatar', 'background'] as const) {
       const prompt = buildAgentArtworkPrompt({ id: 'agent-1', kind });

@@ -54,6 +54,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
   const appOrigin = useAppOrigin();
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
   const fullBody = useAgentStore(agentSelectors.getAgentFullBodyArtworkById(agentId));
+  const metadata = useAgentStore(agentSelectors.getAgentMetadataById(agentId));
   const systemRole = useAgentStore(
     (s) => agentSelectors.getAgentConfigById(agentId)(s)?.systemRole,
   );
@@ -70,13 +71,24 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
   const generating = generation?.status === 'generating' && generation.kind === 'avatar';
   const generationFailed = generation?.status === 'error' && generation.kind === 'avatar';
 
+  const saveFullBodyArtwork = useCallback(
+    (url: string) =>
+      updateAgentMetaById(agentId, { metadata: { ...metadata, fullBodyArtwork: url } }),
+    [agentId, metadata, updateAgentMetaById],
+  );
+
   const generate = useCallback(
-    async (nextStyle: AgentArtworkStyle, composition?: AgentArtworkComposition) => {
+    async (
+      nextStyle: AgentArtworkStyle,
+      composition?: AgentArtworkComposition,
+      direction?: string,
+    ) => {
       const commonInput = {
         description: meta.description,
         id: agentId,
         kind: 'avatar',
         name: meta.name,
+        direction,
         referenceImageUrl: resolveAgentBackground(meta.backgroundColor),
         style: nextStyle,
         styleReferenceImageUrls: styleReferencesForArtworkStyle(nextStyle, appOrigin),
@@ -93,9 +105,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
           input: commonInput,
         });
         if (result.fullBodyUrl) {
-          await updateAgentMetaById(agentId, {
-            fullBodyArtwork: await toTransparentFullBody(result.fullBodyUrl),
-          });
+          await saveFullBodyArtwork(await toTransparentFullBody(result.fullBodyUrl));
         }
       } catch {
         // The Agent store owns the persistent error state rendered below.
@@ -112,9 +122,9 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
       meta.avatar,
       meta.name,
       meta.title,
+      saveFullBodyArtwork,
       systemRole,
       toTransparentFullBody,
-      updateAgentMetaById,
     ],
   );
 
@@ -130,10 +140,8 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
         const result = await uploadWithProgress({ file });
         if (!result?.url) throw new Error('Upload returned no URL');
         await cancelAgentArtworkGeneration(agentId);
-        await updateAgentMetaById(
-          agentId,
-          composition === 'avatar' ? { avatar: result.url } : { fullBodyArtwork: result.url },
-        );
+        if (composition === 'avatar') await updateAgentMetaById(agentId, { avatar: result.url });
+        else await saveFullBodyArtwork(result.url);
       } catch (error) {
         console.error('Failed to upload agent avatar:', error);
         toast.error(t('settingAgent.artwork.uploadFailed'));
@@ -141,7 +149,14 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
         setUploading(false);
       }
     },
-    [agentId, cancelAgentArtworkGeneration, t, updateAgentMetaById, uploadWithProgress],
+    [
+      agentId,
+      cancelAgentArtworkGeneration,
+      saveFullBodyArtwork,
+      t,
+      updateAgentMetaById,
+      uploadWithProgress,
+    ],
   );
 
   return (

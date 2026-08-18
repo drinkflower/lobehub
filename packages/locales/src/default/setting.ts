@@ -74,6 +74,8 @@ export default {
   'artworkStudio.cancel': 'Cancel generation',
   'artworkStudio.composition.avatar': 'Avatar',
   'artworkStudio.composition.fullBody': 'Full body',
+  'artworkStudio.direction.placeholder':
+    'Add a detail — "a boy with glasses", "cyberpunk mechanic" (optional)',
   'artworkStudio.diyTitle': 'Make your own',
   'artworkStudio.enableModel': 'Enable a model',
   'artworkStudio.generate.avatar': 'Generate',

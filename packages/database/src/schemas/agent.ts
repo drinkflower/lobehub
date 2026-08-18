@@ -52,12 +52,6 @@ export const agents = pgTable(
     editorData: jsonb('editor_data'),
     avatar: text('avatar'),
     backgroundColor: text('background_color'),
-    /**
-     * Head-to-toe artwork of the same character as `avatar`, stored as a
-     * transparent PNG so surfaces that show the agent at large size (the home
-     * hero) can composite it over their own background.
-     */
-    fullBodyArtwork: text('full_body_artwork'),
     marketIdentifier: text('market_identifier'),
     /**
      * The agent's character sheet — traits and artwork. One bag instead of a
