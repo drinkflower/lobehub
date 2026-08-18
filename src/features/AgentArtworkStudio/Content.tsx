@@ -95,6 +95,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
       try {
         const result = await uploadWithProgress({ file });
         if (!result?.url) throw new Error('Upload returned no URL');
+        await cancelAgentArtworkGeneration(agentId);
         if (composition === 'avatar') await updateAgentMetaById(agentId, { avatar: result.url });
         else setFullBody(result.url);
       } catch (error) {
@@ -104,7 +105,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
         setUploading(false);
       }
     },
-    [agentId, t, updateAgentMetaById, uploadWithProgress],
+    [agentId, cancelAgentArtworkGeneration, t, updateAgentMetaById, uploadWithProgress],
   );
 
   return (

@@ -17,6 +17,7 @@ export const openAgentArtworkStudio = (agentId: string): ModalInstance =>
     content: <AgentArtworkStudioContent agentId={agentId} />,
     footer: null,
     maskClosable: true,
+    styles: { content: { paddingBlockStart: 0 } },
     title: t('settingAgent.artwork.studio.title', { ns: 'setting' }),
     width: 'min(94vw, 920px)',
   });

@@ -115,20 +115,8 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   outputCard: css`
     cursor: pointer;
-
-    padding: 14px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorFillQuaternary};
-
-    transition:
-      border-color ${cssVar.motionDurationFast},
-      background ${cssVar.motionDurationFast};
-
-    &:hover {
-      border-color: ${cssVar.colorBorder};
-    }
+    padding-block: 0;
+    padding-inline: 8px;
   `,
   outputActions: css`
     width: 100%;
@@ -136,7 +124,7 @@ const styles = createStaticStyles(({ css }) => ({
   outputGrid: css`
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: 24px;
   `,
   outputPreview: css`
     position: relative;
