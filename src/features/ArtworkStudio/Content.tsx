@@ -29,6 +29,11 @@ const LOBE_STYLE_PREVIEW =
   CHIEF_AGENT_ARTWORKS.find((item) => item.id === 'sienna')?.avatar ??
   DEFAULT_CHIEF_AGENT_ARTWORK.avatar;
 
+/** Both slots share this height so the two cards read as one row. */
+const PREVIEW_HEIGHT = 200;
+/** Keeps the avatar's inset inside its slot proportional to the slot itself. */
+const AVATAR_SIZE = PREVIEW_HEIGHT - 32;
+
 const styles = createStaticStyles(({ css }) => ({
   galleryCheck: css`
     position: absolute;
@@ -100,10 +105,22 @@ const styles = createStaticStyles(({ css }) => ({
     z-index: 2;
     inset: 0;
 
+    padding: 12px;
     border-radius: calc(${cssVar.borderRadiusLG} - 1px);
 
     background: color-mix(in srgb, ${cssVar.colorBgContainer} 88%, transparent);
     backdrop-filter: blur(12px);
+  `,
+  generationOverlayTitle: css`
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 18px;
+    text-align: center;
   `,
   hint: css`
     font-size: 13px;
@@ -119,7 +136,8 @@ const styles = createStaticStyles(({ css }) => ({
     padding-inline: 8px;
   `,
   outputActions: css`
-    width: 176px;
+    width: 100%;
+    max-width: ${PREVIEW_HEIGHT}px;
   `,
   outputGrid: css`
     display: grid;
@@ -138,11 +156,11 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   outputPreviewAvatar: css`
     aspect-ratio: 1;
-    width: 176px;
+    height: ${PREVIEW_HEIGHT}px;
   `,
   outputPreviewFullBody: css`
     aspect-ratio: 3 / 4;
-    width: 176px;
+    height: ${PREVIEW_HEIGHT}px;
   `,
   previewBodyImage: css`
     width: 100%;
@@ -151,6 +169,12 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   sectionTitle: css`
     font-weight: 500;
+  `,
+  uploadSpec: css`
+    font-size: 12px;
+    line-height: 16px;
+    color: ${cssVar.colorTextQuaternary};
+    text-align: center;
   `,
   visuallyHiddenInput: css`
     pointer-events: none;
@@ -223,26 +247,19 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
       [],
     );
 
+    const isGenerating = (composition: AgentArtworkComposition) =>
+      !!generating && (generatingTarget === composition || generatingTarget === 'both');
+
+    // The slot is only ~200px wide, so the overlay carries the headline and the
+    // cancel affordance; the duration hint sits under the row where it has space.
     const renderGenerationOverlay = (composition: AgentArtworkComposition) =>
-      generating && (generatingTarget === composition || generatingTarget === 'both') ? (
-        <Center className={styles.generationOverlay}>
-          <Flexbox align={'center'} gap={10}>
-            <NeuralNetworkLoading size={32} />
-            <Flexbox align={'center'} gap={4}>
-              <Text className={styles.sectionTitle}>{generatingTitle}</Text>
-              <Text className={styles.hint} style={{ textAlign: 'center' }}>
-                {t('artworkStudio.generatingHint')}
-              </Text>
-              <Button
-                size={'small'}
-                style={{ marginBlockStart: 4 }}
-                type={'fill'}
-                onClick={onCancel}
-              >
-                {t('artworkStudio.cancel')}
-              </Button>
-            </Flexbox>
-          </Flexbox>
+      isGenerating(composition) ? (
+        <Center className={styles.generationOverlay} gap={8}>
+          <NeuralNetworkLoading size={28} />
+          <Text className={styles.generationOverlayTitle}>{generatingTitle}</Text>
+          <Button size={'small'} type={'fill'} onClick={onCancel}>
+            {t('artworkStudio.cancel')}
+          </Button>
         </Center>
       ) : null;
 
@@ -272,7 +289,7 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                 avatar={avatar || undefined}
                 key={avatarRemountKey(avatar)}
                 shape={'square'}
-                size={148}
+                size={AVATAR_SIZE}
               />
               {renderGenerationOverlay('avatar')}
             </Center>
@@ -292,6 +309,7 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                 {t('artworkStudio.generate.avatar')}
               </Button>
             </Flexbox>
+            <Text className={styles.uploadSpec}>{t('artworkStudio.uploadSpec.avatar')}</Text>
           </Flexbox>
           <Flexbox
             align={'center'}
@@ -339,8 +357,15 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
                 {t('artworkStudio.generate.fullBody')}
               </Button>
             </Flexbox>
+            <Text className={styles.uploadSpec}>{t('artworkStudio.uploadSpec.fullBody')}</Text>
           </Flexbox>
         </div>
+
+        {generating ? (
+          <Text className={styles.hint} style={{ textAlign: 'center' }}>
+            {t('artworkStudio.generatingHint')}
+          </Text>
+        ) : null}
 
         {canGenerate ? (
           <>
@@ -385,7 +410,7 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
               <Button
                 disabled={generating}
                 icon={WandSparkles}
-                type={'primary'}
+                type={'fill'}
                 onClick={() => onGenerate(style)}
               >
                 {t('artworkStudio.generate.characterSet')}
@@ -402,7 +427,7 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
             </Text>
             <Button
               icon={SettingsIcon}
-              type={'primary'}
+              type={'fill'}
               onClick={() => {
                 close();
                 navigate('/settings/provider/all');

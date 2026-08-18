@@ -261,6 +261,8 @@
   "artworkStudio.style.pixel": "像素风",
   "artworkStudio.style.title": "选择风格",
   "artworkStudio.upload": "上传",
+  "artworkStudio.uploadSpec.avatar": "正方形 1:1 · PNG / JPG · 不超过 1 MB",
+  "artworkStudio.uploadSpec.fullBody": "竖版 3:4 · 建议透明底 PNG · 不超过 1 MB",
   "checking": "检查中…",
   "checkingPermissions": "检查权限中…",
   "creds.actions.delete": "删除",

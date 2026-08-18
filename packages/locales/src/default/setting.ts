@@ -91,6 +91,8 @@ export default {
   'artworkStudio.style.pixel': 'Pixel Art',
   'artworkStudio.style.title': 'Style',
   'artworkStudio.upload': 'Upload',
+  'artworkStudio.uploadSpec.avatar': 'Square (1:1) · PNG or JPG · up to 1 MB',
+  'artworkStudio.uploadSpec.fullBody': 'Portrait (3:4) · transparent PNG recommended · up to 1 MB',
   'artworkStudio.preview.fullBody': 'Full-body character preview',
   'agentCronJobs.addJob': 'Add Scheduled Task',
   'agentCronJobs.clearTopics': 'Clear Topics',

@@ -106,6 +106,16 @@ const getAgentMetaById =
     };
   };
 
+/**
+ * Full-body artwork of the agent's character, or `undefined` when it has none.
+ * Kept out of {@link getAgentMetaById} because `MetaData` is shared with
+ * sessions and groups, which have no such artwork.
+ */
+const getAgentFullBodyArtworkById =
+  (agentId: string) =>
+  (s: AgentStoreState): string | undefined =>
+    s.agentMap[agentId]?.fullBodyArtwork || undefined;
+
 // ==========   Config   ============== //
 
 const inboxAgentConfig = (s: AgentStoreState) => {
@@ -380,6 +390,7 @@ export const agentSelectors = {
   displayableAgentPlugins,
   getAgentConfigById,
   getAgentDocumentsById,
+  getAgentFullBodyArtworkById,
   getAgentMetaById,
   getAgentSlugById,
   hasEnabledKnowledge,

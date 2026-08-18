@@ -161,6 +161,12 @@ export interface AgentItem {
   description?: string | null;
   editorData?: any | null;
   fewShots?: any | null;
+  /**
+   * Head-to-toe artwork of the same character as {@link AgentItem.avatar},
+   * stored as a transparent PNG so large surfaces can composite it over their
+   * own background.
+   */
+  fullBodyArtwork?: string | null;
   id: string;
   /** Market agent identifier for published agents */
   marketIdentifier?: string | null;

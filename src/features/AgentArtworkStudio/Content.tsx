@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 
 import { resolveAgentBackground } from '@/features/AgentProfileArtwork/utils';
 import { ArtworkStudioContent, styleReferencesForArtworkStyle } from '@/features/ArtworkStudio';
-import { DEFAULT_CHIEF_AGENT_ARTWORK } from '@/features/ChiefAgent/artwork';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { cutOutFullBodyArtwork } from '@/services/artworkGeneration';
 import { useAgentStore } from '@/store/agent';
@@ -24,7 +23,7 @@ interface AgentArtworkStudioContentProps {
 
 /**
  * Image models return an opaque JPEG, so the generated full-body artwork is cut
- * out and re-uploaded as a transparent PNG before it is shown — the home
+ * out and re-uploaded as a transparent PNG before it is stored — the home
  * surface composites it over its own background. A failed cut-out keeps the
  * original artwork rather than blocking the result.
  */
@@ -54,6 +53,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
   const { t } = useTranslation('setting');
   const appOrigin = useAppOrigin();
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
+  const fullBody = useAgentStore(agentSelectors.getAgentFullBodyArtworkById(agentId));
   const systemRole = useAgentStore(
     (s) => agentSelectors.getAgentConfigById(agentId)(s)?.systemRole,
   );
@@ -65,7 +65,6 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
   const toTransparentFullBody = useTransparentFullBody();
 
   const [uploading, setUploading] = useState(false);
-  const [fullBody, setFullBody] = useState<string>();
   const [generatingTarget, setGeneratingTarget] = useState<AgentArtworkComposition | 'both'>();
 
   const generating = generation?.status === 'generating' && generation.kind === 'avatar';
@@ -93,7 +92,11 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
           generate: generateAgentArtwork,
           input: commonInput,
         });
-        if (result.fullBodyUrl) setFullBody(await toTransparentFullBody(result.fullBodyUrl));
+        if (result.fullBodyUrl) {
+          await updateAgentMetaById(agentId, {
+            fullBodyArtwork: await toTransparentFullBody(result.fullBodyUrl),
+          });
+        }
       } catch {
         // The Agent store owns the persistent error state rendered below.
       } finally {
@@ -111,6 +114,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
       meta.title,
       systemRole,
       toTransparentFullBody,
+      updateAgentMetaById,
     ],
   );
 
@@ -126,8 +130,10 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
         const result = await uploadWithProgress({ file });
         if (!result?.url) throw new Error('Upload returned no URL');
         await cancelAgentArtworkGeneration(agentId);
-        if (composition === 'avatar') await updateAgentMetaById(agentId, { avatar: result.url });
-        else setFullBody(result.url);
+        await updateAgentMetaById(
+          agentId,
+          composition === 'avatar' ? { avatar: result.url } : { fullBodyArtwork: result.url },
+        );
       } catch (error) {
         console.error('Failed to upload agent avatar:', error);
         toast.error(t('settingAgent.artwork.uploadFailed'));
@@ -141,7 +147,7 @@ const AgentArtworkStudioContent = memo<AgentArtworkStudioContentProps>(({ agentI
   return (
     <ArtworkStudioContent
       avatar={meta.avatar}
-      fullBody={fullBody || DEFAULT_CHIEF_AGENT_ARTWORK.hero}
+      fullBody={fullBody}
       generating={generating}
       generatingTarget={generatingTarget}
       generatingTitle={t('settingAgent.artwork.avatar.generating')}
